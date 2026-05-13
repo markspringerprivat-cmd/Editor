@@ -179,26 +179,59 @@
       const htmlName = names.find((name) => /(^|\/)index\.html?$/i.test(name)) || names.find((name) => /\.html?$/i.test(name));
       if (!htmlName) throw new Error("In der ZIP-Datei wurde keine HTML-Datei gefunden.");
       const folder = htmlName.includes("/") ? htmlName.slice(0, htmlName.lastIndexOf("/") + 1) : "";
-      const blobByRelativeName = new Map();
-      for (const [name, bytes] of files.entries()) {
-        if (name.endsWith("/")) continue;
-        const relative = name.startsWith(folder) ? name.slice(folder.length) : name;
-        const mime = /\.css$/i.test(name) ? "text/css" : /\.js$/i.test(name) ? "text/javascript" : /\.html?$/i.test(name) ? "text/html" : "application/octet-stream";
+
+      const normalizePath = (path) => {
+        const parts = [];
+        String(path || "").replace(/^\.\//, "").split("/").forEach((part) => {
+          if (!part || part === ".") return;
+          if (part === "..") parts.pop();
+          else parts.push(part);
+        });
+        return parts.join("/");
+      };
+      const findBytes = (rawUrl) => {
+        const withoutQuery = String(rawUrl || "").split("#")[0].split("?")[0];
+        const decoded = decodeURIComponent(withoutQuery);
+        const candidates = [
+          decoded,
+          decoded.replace(/^\.\//, ""),
+          normalizePath(decoded),
+          folder + decoded.replace(/^\.\//, ""),
+          normalizePath(folder + decoded.replace(/^\.\//, ""))
+        ];
+        for (const candidate of candidates) {
+          if (files.has(candidate)) return files.get(candidate);
+        }
+        return null;
+      };
+
+      let html = decoder.decode(files.get(htmlName));
+
+      // Für die Vorschau wird aus der exportierten ZIP eine komplette, eigenständige HTML-Datei gebaut.
+      // Dadurch funktionieren CSS, Runtime-JavaScript und Interaktionen wie Drag & Drop auch im iframe.
+      html = html.replace(/<link\b([^>]*?)href=(['"])([^'"]+\.css[^'"]*)\2([^>]*)>/gi, (match, before, quote, rawUrl) => {
+        if (/^(https?:|data:|blob:|mailto:|tel:)/i.test(rawUrl)) return match;
+        const bytes = findBytes(rawUrl);
+        return bytes ? `<style data-inlined-from="${rawUrl.replace(/"/g, "&quot;")}">${decoder.decode(bytes)}</style>` : match;
+      });
+      html = html.replace(/<script\b([^>]*?)src=(['"])([^'"]+\.js[^'"]*)\2([^>]*)><\/script>/gi, (match, before, quote, rawUrl) => {
+        if (/^(https?:|data:|blob:|mailto:|tel:)/i.test(rawUrl)) return match;
+        const bytes = findBytes(rawUrl);
+        return bytes ? `<script data-inlined-from="${rawUrl.replace(/"/g, "&quot;")}">${decoder.decode(bytes)}<\/script>` : match;
+      });
+      html = html.replace(/(src)=(['"])([^'"#][^'"]*)\2/g, (match, attr, quote, rawUrl) => {
+        if (/^(https?:|data:|blob:|mailto:|tel:)/i.test(rawUrl)) return match;
+        const bytes = findBytes(rawUrl);
+        if (!bytes) return match;
+        const mime = /\.png$/i.test(rawUrl) ? "image/png" : /\.jpe?g$/i.test(rawUrl) ? "image/jpeg" : /\.gif$/i.test(rawUrl) ? "image/gif" : /\.svg$/i.test(rawUrl) ? "image/svg+xml" : /\.webp$/i.test(rawUrl) ? "image/webp" : /\.mp4$/i.test(rawUrl) ? "video/mp4" : "application/octet-stream";
         const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
         previewUrls.push(url);
-        blobByRelativeName.set(relative, url);
-      }
-      let html = decoder.decode(files.get(htmlName));
-      html = html.replace(/(href|src)=(['"])([^'"#][^'"]*)\2/g, (match, attr, quote, rawUrl) => {
-        if (/^(https?:|data:|blob:|mailto:|tel:)/i.test(rawUrl)) return match;
-        const cleaned = rawUrl.replace(/^\.\//, "");
-        const replacement = blobByRelativeName.get(cleaned) || blobByRelativeName.get(decodeURIComponent(cleaned));
-        return replacement ? `${attr}=${quote}${replacement}${quote}` : match;
+        return `${attr}=${quote}${url}${quote}`;
       });
       frame.removeAttribute("src");
       frame.srcdoc = html;
       code.value = html;
-      setStatus(`ZIP-Vorschau geladen: ${htmlName}`);
+      setStatus(`ZIP-Vorschau geladen: ${htmlName} – vollständig eingebettet und interaktiv.`);
     }
 
     const render = () => {
