@@ -1,110 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>H5P-ähnliche Editoren</title>
-  <link rel="stylesheet" href="style.css?v=57" />
+  <link rel="stylesheet" href="style.css?v=58">
 </head>
-<body id="top" data-page="h5p-lite-home">
-  <main class="page-shell overview-shell">
-    <section class="overview-hero blind-readable uniform-hover" data-blind-target="h5p-lite-intro" tabindex="0" role="button" aria-label="Einführung vorlesen">
-      <p class="eyebrow">Separate Editor-Webseite</p>
-      <h1>H5P-ähnliche Editoren</h1>
-      <p class="overview-intro">Diese eigenständige Webseite enthält die nachgebauten Aktivitätseditoren. Sie ist getrennt von der eigentlichen Kursübersicht und kann separat weiterentwickelt oder veröffentlicht werden.</p>
-    </section>
-
-    <div class="blind-mode-row overview-blind-mode-row">
-      <button class="blind-mode-toggle" id="blindModeToggle" type="button" aria-pressed="false">Vorlesemodus: aus</button>
-      <p class="blind-mode-hint" id="blindModeHint" hidden></p>
-    </div>
-
-    <div class="top-divider overview-divider" aria-hidden="true"></div>
-
-    <section class="h5p-lite-link-grid" aria-label="Editoren">
-      <a class="h5p-lite-link-card blind-readable" href="interactive-video.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Editor</span><h2>Interaktives Video</h2><p>Video mit Zeitmarken, Pausen und Fragen im Glas-Overlay.</p>
-      </a>
-      <a class="h5p-lite-link-card blind-readable" href="course-presentation.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Container</span><h2>Course Presentation</h2><p>Folien mit Text, Medien, Quiz, Drag the Words, Drag and Drop oder interaktivem Video.</p>
-      </a>
-      <a class="h5p-lite-link-card blind-readable" href="interactive-book.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Container</span><h2>Interactive Book</h2><p>Buchseiten mit unterschiedlichen Inhaltstypen und Aufgaben.</p>
-      </a>
-      <a class="h5p-lite-link-card blind-readable" href="multiple-choice.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Aufgabe</span><h2>Single &amp; Multiple Choice</h2><p>Fragen mit dynamischen Antwortmöglichkeiten, Single- oder Multiple-Choice-Modus und Feedback.</p>
-      </a>
-      <a class="h5p-lite-link-card blind-readable" href="drag-the-words.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Aufgabe</span><h2>Drag the Words</h2><p>Textlücken mit ziehbaren Begriffen.</p>
-      </a>
-      <a class="h5p-lite-link-card blind-readable" href="drag-and-drop.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Aufgabe</span><h2>Drag and Drop</h2><p>Begriffe und Zielbereiche mit Zuordnungsprüfung.</p>
-      </a>
-    </section>
-
-    <section class="embedded-product-section embedded-course-product" aria-label="Eingebettete fertige Course Presentation">
-      <div class="embedded-product-head">
-        <div>
-          <p class="eyebrow">Fertiges Element</p>
-          <h2>Eigene Course Presentation</h2>
-          <p>Diese hochgeladene Course Presentation ist direkt eingebettet und nicht als Editor geöffnet.</p>
-        </div>
-      </div>
-      <div class="embedded-course-shell" id="embeddedCourseRoot">
-        <section class="embedded-course-top">
-          <p class="eyebrow">Exportierte Aktivität</p>
-          <h1>Eigene Course Presentation</h1>
-        </section>
-        <div id="embeddedCourseViewer" class="embedded-course-viewer"></div>
-        <div class="embedded-course-nav" aria-label="Foliennavigation">
-          <button id="embeddedCoursePrev" type="button">Zurück</button>
-          <span id="embeddedCourseCount"></span>
-          <button id="embeddedCourseNext" type="button">Weiter</button>
-        </div>
-      </div>
-    </section>
-
-    <style>
-      .embedded-course-product { margin-top: 32px; }
-      .embedded-course-shell { border: 1.3px solid rgba(17,24,39,.7); padding: 24px; background: #fff; box-shadow: 8px 16px 28px rgba(17,24,39,.08); }
-      .embedded-course-top, .embedded-course-product .lite-content-block { border: 1.3px solid rgba(17,24,39,.55); padding: 24px; margin-bottom: 16px; background: #fff; }
-      .embedded-course-top h1 { font-size: clamp(1.8rem, 3vw, 3.2rem); line-height: 1; margin: 0; }
-      .embedded-course-nav { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0 0; }
-      .embedded-course-nav button, .embedded-course-product .iv-primary-button { border: 1px solid rgba(47,95,143,.35); background: #e8f2fb; color: #173d63; font-weight: 800; padding: 11px 15px; cursor: pointer; }
-      .embedded-course-product .h5p-lite-answer-stack, .embedded-course-product .dtw-word-bank, .embedded-course-product .dnd-bank { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-      .embedded-course-product .iv-answer-button { border: 1px solid rgba(47,95,143,.35); background: #fff; color: #173d63; font-weight: 800; padding: 11px 15px; cursor: pointer; text-align: left; }
-      .embedded-course-product .iv-answer-button.is-selected { outline: 2px solid rgba(47,95,143,.55); }
-      .embedded-course-product .iv-feedback { margin-top: 14px; font-weight: 850; }
-      .embedded-course-product .dtw-blank { display: inline-flex; min-width: 110px; min-height: 32px; border: 1.4px dashed #2f5f8f; background: #e8f2fb; margin: 0 5px; padding: 4px 8px; vertical-align: middle; }
-      .embedded-course-product .dtw-chip, .embedded-course-product .dnd-item { border: 1px solid rgba(17,24,39,.32); border-radius: 999px; background: #fff; padding: 10px 14px; font-weight: 800; cursor: grab; }
-      .embedded-course-product .dnd-target-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 12px; margin-top: 18px; }
-      .embedded-course-product .dnd-target { min-height: 140px; border: 1.4px dashed #2f5f8f; background: #f4f8fc; padding: 14px; }
-      .embedded-course-product .is-correct { background: #dcfce7!important; }
-    </style>
-
-    <script>
-      (function () {
-        const KIND = "course-presentation";
-        const DATA = {"title": "Eigene Course Presentation", "slides": [{"id": "52d8b3c8-af6c-49fb-aaf6-ef8d34f6bde2", "type": "dragWords", "title": "Folie 1", "text": "Hier steht dein Inhalt.", "media": "", "question": "Welche Antwort passt?", "description": "Wähle die passende Antwort aus.", "answers": ["Antwort 1", "Antwort 2", "Antwort 3", "Antwort 4", "Antwort 5", "Antwort 6"], "questionMode": "multiple", "correctIndex": 0, "correctIndexes": [0], "dragText": "Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].", "pairs": [{"item": "Wartezeit", "target": "Gesprächsführung"}, {"item": "Tafelbild", "target": "Sicherung"}], "interactions": [{"id": "7f6f26ee-3299-49b8-bb2c-b80f5397a0da", "time": 4, "question": "Was ist hier wichtig?", "description": "Wähle eine Antwort aus.", "answers": ["Genau beobachten", "Überspringen"], "questionMode": "single", "correctIndex": 0, "correctIndexes": [0], "pause": true}]}, {"id": "3a3ac30b-848a-431d-8309-8a57e64768f5", "type": "dragDrop", "title": "Folie 2", "text": "Hier steht dein Inhalt.", "media": "", "question": "Welche Antwort passt?", "description": "Wähle die passende Antwort aus.", "answers": ["Antwort 1", "Antwort 2", "Antwort 3"], "questionMode": "single", "correctIndex": 0, "correctIndexes": [0], "dragText": "Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].", "pairs": [{"item": "Wartezeit", "target": "Gesprächsführung"}, {"item": "Tafelbild", "target": "Sicherung"}], "interactions": [{"id": "5554ec33-6e8f-4285-902d-96d5a3424ba3", "time": 4, "question": "Was ist hier wichtig?", "description": "Wähle eine Antwort aus.", "answers": ["Genau beobachten", "Überspringen"], "questionMode": "single", "correctIndex": 0, "correctIndexes": [0], "pause": true}]}, {"id": "ab6c8412-9985-44e0-a122-eb20bf3e5b5d", "type": "text", "title": "Folie 3", "text": "Hier steht dein Inhalt.", "media": "", "question": "Welche Antwort passt?", "description": "Wähle die passende Antwort aus.", "answers": ["Antwort 1", "Antwort 2", "Antwort 3"], "questionMode": "single", "correctIndex": 0, "correctIndexes": [0], "dragText": "Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].", "pairs": [{"item": "Wartezeit", "target": "Gesprächsführung"}, {"item": "Tafelbild", "target": "Sicherung"}], "interactions": [{"id": "29400d4e-6ad0-40c2-9952-4916430f5bc8", "time": 4, "question": "Was ist hier wichtig?", "description": "Wähle eine Antwort aus.", "answers": ["Genau beobachten", "Überspringen"], "questionMode": "single", "correctIndex": 0, "correctIndexes": [0], "pause": true}]}]};
-        const root = document.getElementById('embeddedCourseRoot');
-        if (!root) return;
-        const $ = (id) => document.getElementById(id);
-        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
-        const def = (t = 'text', title = 'Inhalt') => ({ type: t, title, text: '', media: '', question: 'Frage', description: '', answers: ['Antwort 1'], questionMode: 'single', correctIndex: 0, correctIndexes: [0], dragText: 'Text mit [Lücke].', pairs: [{ item: 'Begriff', target: 'Ziel' }], interactions: [] });
-        function norm(x = {}) { const b = { ...def(x.type, x.title), ...x }; b.answers = Array.isArray(b.answers) && b.answers.length ? b.answers.map(String) : ['Antwort 1']; b.questionMode = b.questionMode === 'multiple' ? 'multiple' : 'single'; const raw = Array.isArray(b.correctIndexes) && b.correctIndexes.length ? b.correctIndexes.map(Number) : [Number(b.correctIndex) || 0]; const clean = [...new Set(raw.filter((n) => Number.isFinite(n) && n >= 0 && n < b.answers.length))]; b.correctIndexes = b.questionMode === 'multiple' ? (clean.length ? clean : [0]) : [clean[0] || 0]; b.correctIndex = b.correctIndexes[0] || 0; b.pairs = Array.isArray(b.pairs) && b.pairs.length ? b.pairs : def().pairs; return b; }
-        function mc(d) { d = norm({ ...d, type: 'multipleChoice' }); const type = d.questionMode === 'multiple' ? 'checkbox' : 'radio'; const correct = new Set(d.correctIndexes.map(Number)); const group = 'embedded-mc-' + Math.random().toString(16).slice(2); return '<article class="lite-content-block" data-lite-type="mc" data-mode="' + d.questionMode + '"><p class="eyebrow">' + (d.questionMode === 'multiple' ? 'Multiple Choice' : 'Single Choice') + '</p><h2>' + esc(d.question || d.title) + '</h2><p>' + esc(d.description || d.text) + '</p><div class="h5p-lite-answer-stack">' + d.answers.map((a, i) => '<label class="iv-answer-button mc-choice"><input type="' + type + '" name="' + group + '" data-correct="' + correct.has(i) + '"> ' + esc(a) + '</label>').join('') + '</div><button class="iv-primary-button lite-check-mc" type="button">Prüfen</button><div class="iv-feedback" hidden></div></article>'; }
-        function dtw(d) { d = norm(d); const words = []; const html = esc(d.dragText || d.text).replace(/\[([^\]]+)\]/g, (_, w) => { words.push(w); return '<span class="dtw-blank" data-answer="' + esc(w) + '"></span>'; }); return '<article class="lite-content-block" data-lite-type="dtw"><h2>' + esc(d.title) + '</h2><p>' + html + '</p><div class="dtw-word-bank">' + words.sort(() => Math.random() - .5).map((w) => '<button class="dtw-chip" draggable="true" type="button">' + esc(w) + '</button>').join('') + '</div><button class="iv-primary-button lite-check-dtw" type="button">Prüfen</button><div class="iv-feedback" hidden></div></article>'; }
-        function dnd(d) { d = norm(d); const targets = [...new Set(d.pairs.map((p) => p.target))]; return '<article class="lite-content-block" data-lite-type="dnd"><h2>' + esc(d.title) + '</h2><p>' + esc(d.description || 'Ziehe die Begriffe in die passenden Felder.') + '</p><div class="dnd-bank">' + [...d.pairs].sort(() => Math.random() - .5).map((p) => '<button class="dnd-item" draggable="true" type="button" data-target="' + esc(p.target) + '">' + esc(p.item) + '</button>').join('') + '</div><div class="dnd-target-grid">' + targets.map((t) => '<div class="dnd-target" data-target="' + esc(t) + '"><strong>' + esc(t) + '</strong></div>').join('') + '</div><button class="iv-primary-button lite-check-dnd" type="button">Prüfen</button><div class="iv-feedback" hidden></div></article>'; }
-        function block(x) { const d = norm(x); const media = String(d.media || '').trim(); if (d.type === 'imageText') return '<article class="lite-content-block"><h2>' + esc(d.title) + '</h2>' + (media ? '<img class="lite-media" src="' + esc(media) + '" alt="">' : '') + '<p>' + esc(d.text) + '</p></article>'; if (d.type === 'video' || d.type === 'interactiveVideo') return '<article class="lite-content-block"><h2>' + esc(d.title) + '</h2><p>' + esc(d.text) + '</p>' + (media ? '<video class="lite-video" src="' + esc(media) + '" controls></video>' : '<p>Noch keine Video-URL eingetragen.</p>') + '</article>'; if (d.type === 'multipleChoice') return mc(d); if (d.type === 'dragWords') return dtw(d); if (d.type === 'dragDrop') return dnd(d); return '<article class="lite-content-block"><h2>' + esc(d.title) + '</h2><p>' + esc(d.text) + '</p></article>'; }
-        function attach(scope) { scope.querySelectorAll('.mc-choice input').forEach((input) => input.onchange = () => { const card = input.closest('[data-lite-type="mc"]'); if (card.dataset.mode === 'single') card.querySelectorAll('.mc-choice').forEach((l) => l.classList.remove('is-selected')); input.closest('.mc-choice').classList.toggle('is-selected', input.checked); }); scope.querySelectorAll('.lite-check-mc').forEach((button) => button.onclick = () => { const card = button.closest('[data-lite-type="mc"]'); const inputs = [...card.querySelectorAll('input')]; const ok = inputs.every((input) => input.checked === (input.dataset.correct === 'true')); const f = card.querySelector('.iv-feedback'); if (f) { f.hidden = false; f.textContent = ok ? 'Richtig.' : 'Noch nicht richtig.'; } }); scope.querySelectorAll('.dtw-chip,.dnd-item').forEach((item) => item.ondragstart = (event) => event.dataTransfer.setData('text/plain', item.outerHTML)); scope.querySelectorAll('.dtw-blank,.dnd-target').forEach((target) => { target.ondragover = (event) => event.preventDefault(); target.ondrop = (event) => { event.preventDefault(); const h = document.createElement('div'); h.innerHTML = event.dataTransfer.getData('text/plain'); const item = h.firstElementChild; if (!item) return; if (target.classList.contains('dtw-blank')) target.innerHTML = ''; target.appendChild(item); attach(target); }; }); scope.querySelectorAll('.lite-check-dtw').forEach((button) => button.onclick = () => { const card = button.closest('[data-lite-type="dtw"]'); const blanks = [...card.querySelectorAll('.dtw-blank')]; const ok = blanks.every((b) => b.textContent.trim() === b.dataset.answer); blanks.forEach((b) => b.classList.toggle('is-correct', b.textContent.trim() === b.dataset.answer)); const f = card.querySelector('.iv-feedback'); if (f) { f.hidden = false; f.textContent = ok ? 'Alles richtig.' : 'Einige Lücken stimmen noch nicht.'; } }); scope.querySelectorAll('.lite-check-dnd').forEach((button) => button.onclick = () => { const card = button.closest('[data-lite-type="dnd"]'); const items = [...card.querySelectorAll('.dnd-target .dnd-item')]; const ok = items.length && items.every((i) => i.dataset.target === i.parentElement.dataset.target); items.forEach((i) => i.classList.toggle('is-correct', i.dataset.target === i.parentElement.dataset.target)); const f = card.querySelector('.iv-feedback'); if (f) { f.hidden = false; f.textContent = ok ? 'Alles richtig.' : 'Einige Zuordnungen stimmen noch nicht.'; } }); }
-        let active = 0;
-        function render() { const viewer = $('embeddedCourseViewer'); const slides = DATA.slides && DATA.slides.length ? DATA.slides : [def('text', 'Folie 1')]; active = Math.max(0, Math.min(active, slides.length - 1)); viewer.innerHTML = block(slides[active]); const c = $('embeddedCourseCount'); if (c) c.textContent = 'Folie ' + (active + 1) + ' von ' + slides.length; attach(viewer); }
-        $('embeddedCoursePrev').onclick = () => { active = Math.max(0, active - 1); render(); };
-        $('embeddedCourseNext').onclick = () => { const max = (DATA.slides || []).length - 1; active = Math.min(max, active + 1); render(); };
-        render();
-      })();
-    </script>
-  </main>
-  <script src="script.js?v=57"></script>
+<body data-page="home">
+  <div id="app"></div>
+  <script src="app.js?v=58"></script>
 </body>
 </html>

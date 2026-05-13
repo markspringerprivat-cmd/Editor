@@ -1,58 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Drag and Drop – Editor</title>
-  <link rel="stylesheet" href="style.css?v=57" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drag the Words</title>
+  <link rel="stylesheet" href="style.css?v=58">
 </head>
-<body id="top" data-page="h5p-lite" data-activity="drag-and-drop">
-  <main class="page-shell h5p-lite-shell">
-    <a class="back-link" href="index.html#top">← Zur Editor-Übersicht</a>
-
-    <section class="iv-hero blind-readable uniform-hover" data-blind-target="h5p-lite-intro" tabindex="0" role="button" aria-label="Einführung vorlesen">
-      <p class="eyebrow">Eigene H5P-ähnliche Testfunktion</p>
-      <h1>Drag and Drop</h1>
-      <p>Erstelle Zielbereiche und ziehbare Begriffe. Jede Zeile im Editor besteht aus Begriff und Ziel, getrennt durch einen senkrechten Strich.</p>
-    </section>
-
-    <div class="blind-mode-row">
-      <button class="blind-mode-toggle" id="blindModeToggle" type="button" aria-pressed="false">Vorlesemodus: aus</button>
-      <p class="blind-mode-hint" id="blindModeHint" hidden></p>
-    </div>
-
-    <div class="top-divider" aria-hidden="true"></div>
-
-    <section class="h5p-lite-layout" aria-label="Drag-and-Drop-Editor">
-      <div class="h5p-lite-preview-panel">
-        <article class="h5p-lite-question-preview" id="dndPreview"></article>
-        <div class="iv-feedback" id="dndResult" hidden></div>
-      </div>
-      <div class="iv-editor-stack">
-        <section class="iv-editor-panel blind-readable" data-blind-target="h5p-lite-panel" tabindex="0" role="button" aria-label="Editor vorlesen">
-          <h2>Zuordnung bearbeiten</h2>
-          <div class="iv-field"><label for="titleInput">Titel</label><input id="titleInput" type="text" /></div>
-          <div class="iv-field"><label for="instructionsInput">Arbeitsauftrag</label><textarea id="instructionsInput"></textarea></div>
-          <div class="iv-field"><label for="pairsInput">Begriff | Zielbereich</label><textarea id="pairsInput" rows="8"></textarea></div>
-          <p class="iv-marker-meta">Beispiel: Wartezeit | Gesprächsführung</p>
-        </section>
-        <section class="iv-list-panel h5p-lite-config-panel">
-          <h2>Konfiguration</h2>
-          <div class="iv-field">
-            <label for="configArea">Konfiguration kopieren oder einfügen</label>
-            <textarea id="configArea" spellcheck="false"></textarea>
-          </div>
-          <div class="iv-button-row">
-            <button class="iv-secondary-button" id="exportButton" type="button">JSON exportieren</button>
-            <button class="iv-primary-button" id="downloadHtmlButton" type="button">HTML-ZIP herunterladen</button>
-            <button class="iv-secondary-button" id="importButton" type="button">Importieren</button>
-            <button class="iv-danger-button" id="resetButton" type="button">Zurücksetzen</button>
-          </div>
-        </section>
-      </div>
-    </section>
-  </main>
-  <script src="script.js?v=57"></script>
-  <script src="activity-editor.js?v=57"></script>
+<body data-page="drag-the-words">
+  <div id="app"></div>
+  <script src="app.js?v=58"></script>
 </body>
 </html>
