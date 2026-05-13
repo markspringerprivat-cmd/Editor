@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '65';
+  const VERSION = '66';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -53,7 +53,7 @@
       correct: [0],
       dragText: 'Text mit [Lücke].',
       pairs: [{ item: 'Begriff', target: 'Zielbereich' }],
-      overlay: { left: 6, top: 58, width: 88, height: 28, bg: 'rgba(255,255,255,.86)', textColor: '#111827', border: true, shadow: true }
+      overlay: { bg: 'rgba(255,255,255,.88)', textColor: '#111827', border: false, shadow: false }
     };
   }
 
@@ -113,16 +113,12 @@
 
   function ivOverlayStyle(action = {}) {
     const o = action.overlay || {};
-    const width = clampNumber(o.width, 24, 96, 88);
-    const height = clampNumber(o.height, 18, 88, 28);
-    const left = clampNumber(o.left, 0, Math.max(0, 100 - width), 6);
-    const top = clampNumber(o.top, 0, Math.max(0, 100 - height), 58);
-    const bg = o.bg || 'rgba(255,255,255,.86)';
+    const bg = o.bg || 'rgba(255,255,255,.88)';
     const color = o.textColor || '#111827';
-    const border = o.border === false ? 'transparent' : 'rgba(47,95,143,.35)';
-    const shadow = o.shadow === false ? 'none' : '0 18px 40px rgba(17,24,39,.20)';
-    action.overlay = { ...o, left, top, width, height, bg, textColor: color, border: o.border !== false, shadow: o.shadow !== false };
-    return `left:${left}%;top:${top}%;width:${width}%;height:${height}%;right:auto;bottom:auto;background:${bg};color:${color};border:1px solid ${border};box-shadow:${shadow};`;
+    const border = o.border === true ? 'rgba(47,95,143,.28)' : 'transparent';
+    const shadow = o.shadow === true ? '0 18px 40px rgba(17,24,39,.16)' : 'none';
+    action.overlay = { ...o, bg, textColor: color, border: o.border === true, shadow: o.shadow === true };
+    return `left:50%;top:50%;width:min(86%,920px);max-height:78%;height:auto;right:auto;bottom:auto;transform:translate(-50%,-50%);background:${bg};color:${color};border:1px solid ${border};box-shadow:${shadow};`;
   }
 
   function defaultPage(n = 1, label = 'Folie') {
@@ -294,7 +290,7 @@
     overlay.hidden = false;
     overlay.classList.remove('editing-overlay');
     overlay.setAttribute('style', ivOverlayStyle(action));
-    overlay.innerHTML = `<div class="iv-card"><h3>${esc(action.question || 'Interaktion')}</h3><p>${esc(action.description || '')}</p>${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Weiter</button></div></div>`;
+    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Weiter</button></div></div>`;
     attachRunHandlers(overlay, () => action);
     overlay.querySelector('.continue-video')?.addEventListener('click', () => { overlay.hidden = true; onContinue?.(); });
   }
@@ -315,40 +311,38 @@
     return `<div class="pair-editor compact-pair-editor"><div class="pair-head"><span>Begriff / Beispiel</span><span>Zielbereich</span><span></span></div>${list.map((p,i)=>`<div class="pair-row"><input data-iv-pair-item="${i}" data-action-index="${actionIndex}" value="${esc(p.item)}" placeholder="Begriff"><input data-iv-pair-target="${i}" data-action-index="${actionIndex}" value="${esc(p.target)}" placeholder="Zielbereich"><button class="btn small" type="button" data-iv-pair-remove="${i}" data-action-index="${actionIndex}">×</button></div>`).join('')}<button class="btn small" type="button" data-iv-pair-add data-action-index="${actionIndex}">Weiteres Paar hinzufügen</button></div>`;
   }
 
+  function humanCorrectValue(values = [0]) {
+    return (Array.isArray(values) ? values : [0]).map(v => Number(v) + 1).filter(v => Number.isFinite(v) && v > 0).join(',');
+  }
+
   function actionSpecificFields(action, prefix = 'draft') {
     const a = normalizeAction(action);
     if (a.type === 'choice') {
-      return `<div class="iv-field-block"><label>Antworten <textarea data-${prefix}-list="answers" rows="3">${esc(a.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en), z. B. 0 oder 0,2 <input data-${prefix}-correct value="${esc((a.correct || [0]).join(','))}"></label></div>`;
+      return `<div class="iv-field-block full"><label>Antworten <textarea data-${prefix}-list="answers" rows="4">${esc(a.answers.join('\\n'))}</textarea></label><label>Richtige Antwort(en) <input data-${prefix}-correct value="${esc(humanCorrectValue(a.correct || [0]))}" placeholder="z. B. 1 oder 1,3"></label><p class="muted small-note">Die Zählung beginnt bei 1: Antwort 1, Antwort 2, Antwort 3 …</p></div>`;
     }
     if (a.type === 'dragWords') {
-      return `<div class="iv-field-block"><label>Text mit Lücken <textarea data-${prefix}-prop="dragText" rows="3">${esc(a.dragText)}</textarea></label></div>`;
+      return `<div class="iv-field-block full"><label>Text mit Lücken <textarea data-${prefix}-prop="dragText" rows="4">${esc(a.dragText)}</textarea></label><p class="muted small-note">Lücken mit eckigen Klammern markieren, z. B. [Wartezeit].</p></div>`;
     }
     if (a.type === 'dragDrop') {
-      return `<div class="iv-field-block">${renderPairsEditor(a.pairs, `${prefix}pair`)}</div>`;
+      return `<div class="iv-field-block full">${renderPairsEditor(a.pairs, `${prefix}pair`)}</div>`;
     }
     return '';
   }
 
   function renderActionBuilder(action, prefix = 'ivdraft', existing = false) {
     const a = normalizeAction(action);
-    return `<div class="iv-builder-card">
-      <div class="iv-builder-grid">
-        <label>Sekunde <input data-${prefix}-prop="time" type="number" step="0.1" min="0" value="${esc(a.time)}"></label>
-        <label>Aktionstyp <select data-${prefix}-type><option value="choice" ${a.type === 'choice' ? 'selected' : ''}>Single & Multiple Choice</option><option value="dragWords" ${a.type === 'dragWords' ? 'selected' : ''}>Drag the Words</option><option value="dragDrop" ${a.type === 'dragDrop' ? 'selected' : ''}>Drag and Drop</option></select></label>
+    const takeBtn = prefix === 'singleiv' ? `<button class="btn" id="takeTime" type="button">Aktuelle Zeit übernehmen</button>` : '';
+    return `<div class="iv-builder-card refined-iv-builder">
+      <div class="iv-top-row">
+        <label class="type-field">Aktionstyp <select data-${prefix}-type><option value="choice" ${a.type === 'choice' ? 'selected' : ''}>Single & Multiple Choice</option><option value="dragWords" ${a.type === 'dragWords' ? 'selected' : ''}>Drag the Words</option><option value="dragDrop" ${a.type === 'dragDrop' ? 'selected' : ''}>Drag and Drop</option></select></label>
+        <label class="time-field">Sekunde <input data-${prefix}-prop="time" type="number" step="0.1" min="0" value="${esc(a.time)}"></label>
+        ${takeBtn}
+      </div>
+      <div class="iv-text-row">
         <label>Frage <input data-${prefix}-prop="question" value="${esc(a.question)}"></label>
         <label>Beschreibung <input data-${prefix}-prop="description" value="${esc(a.description)}"></label>
       </div>
       ${actionSpecificFields(a, prefix)}
-      <details class="iv-layout-details"><summary>Overlay gestalten</summary><div class="iv-builder-grid">
-        <label>Links (%) <input data-${prefix}-overlay="left" type="number" step="1" value="${esc(a.overlay?.left ?? 6)}"></label>
-        <label>Oben (%) <input data-${prefix}-overlay="top" type="number" step="1" value="${esc(a.overlay?.top ?? 58)}"></label>
-        <label>Breite (%) <input data-${prefix}-overlay="width" type="number" step="1" value="${esc(a.overlay?.width ?? 88)}"></label>
-        <label>Höhe (%) <input data-${prefix}-overlay="height" type="number" step="1" value="${esc(a.overlay?.height ?? 30)}"></label>
-        <label>Fläche <input data-${prefix}-overlay="bg" value="${esc(a.overlay?.bg || 'rgba(255,255,255,.82)')}"></label>
-        <label>Schriftfarbe <input data-${prefix}-overlay="textColor" type="color" value="${esc(a.overlay?.textColor || '#111827')}"></label>
-        <label class="checkline"><input data-${prefix}-overlay-check="border" type="checkbox" ${a.overlay?.border !== false ? 'checked' : ''}> Rahmen</label>
-        <label class="checkline"><input data-${prefix}-overlay-check="shadow" type="checkbox" ${a.overlay?.shadow !== false ? 'checked' : ''}> Schatten</label>
-      </div></details>
       <div class="iv-builder-actions">
         <button class="btn primary" type="button" data-${prefix}-add>${existing ? 'Als neue Aktion hinzufügen' : 'Aktion hinzufügen'}</button>
         <button class="btn" type="button" data-${prefix}-update ${existing ? '' : 'disabled'}>Aktualisieren</button>
@@ -377,7 +371,7 @@
     if (block.type === 'image') content = `<label>Bild-URL <input data-prop="media" value="${esc(block.media)}"></label><label>Bilddatei <input type="file" accept="image/*" data-file="media"></label>`;
     if (block.type === 'video') content = `<label>Video-URL <input data-prop="media" value="${esc(block.media)}" placeholder="Direkte Videodatei oder YouTube-Link"></label><label>Videodatei <input type="file" accept="video/*" data-file="media"></label>`;
     if (block.type === 'interactiveVideo') content = renderInlineInteractiveVideoEditor(block);
-    if (block.type === 'choice') content = `<label>Frage <input data-prop="question" value="${esc(block.question)}"></label><label>Beschreibung <input data-prop="description" value="${esc(block.description)}"></label><label>Antworten <textarea data-prop-list="answers" rows="3">${esc(block.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en), z. B. 0 oder 0,2 <input data-prop-correct value="${esc((block.correct||[0]).join(','))}"></label>`;
+    if (block.type === 'choice') content = `<label>Frage <input data-prop="question" value="${esc(block.question)}"></label><label>Beschreibung <input data-prop="description" value="${esc(block.description)}"></label><label>Antworten <textarea data-prop-list="answers" rows="3">${esc(block.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en), z. B. 1 oder 1,3 <input data-prop-correct value="${esc(humanCorrectValue(block.correct||[0]))}"></label>`;
     if (block.type === 'dragWords') content = `<label>Text mit Lücken <textarea data-prop="dragText" rows="3">${esc(block.dragText)}</textarea></label>`;
     if (block.type === 'dragDrop') content = `<label>Aufgabentext <input data-prop="description" value="${esc(block.description)}"></label>${renderPairsEditor(block.pairs, 'blockpair')}`;
     return `<div class="properties-strip"><div class="prop-title">Element bearbeiten</div>${content}<label class="checkline"><input type="checkbox" data-style="bgTransparent" ${block.style.bgTransparent ? 'checked' : ''}> Hintergrund transparent</label><label>Hintergrundfarbe <input type="color" data-style="bgColor" value="${esc(block.style.bgColor || '#ffffff')}"></label><label class="checkline"><input type="checkbox" data-style="showBorder" ${block.style.showBorder !== false ? 'checked' : ''}> Rahmen anzeigen</label><label class="checkline"><input type="checkbox" data-style="showShadow" ${block.style.showShadow === true ? 'checked' : ''}> Schatten anzeigen</label><div class="layer-buttons"><button type="button" data-layer="back">Ebene zurück</button><button type="button" data-layer="front">Ebene vor</button><button type="button" data-layer="bottom">Ganz nach hinten</button><button type="button" data-layer="top">Ganz nach vorne</button><button class="danger" type="button" data-delete>Element löschen</button></div></div>`;
@@ -451,7 +445,7 @@
       const b = selected(); if (!b) return;
       app.querySelectorAll('[data-prop]').forEach(input => input.addEventListener('input', () => { b[input.dataset.prop] = input.value; updateSelectedDom(b); save(); }));
       app.querySelectorAll('[data-prop-list]').forEach(input => input.addEventListener('input', () => { b[input.dataset.propList] = input.value.split('\n').filter(Boolean); updateSelectedDom(b); save(); }));
-      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { b.correct = e.target.value.split(',').map(x=>Number(x.trim())).filter(Number.isFinite); save(); });
+      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { b.correct = e.target.value.split(',').map(x=>Number(x.trim())-1).filter(x=>Number.isFinite(x) && x>=0); save(); });
       app.querySelectorAll('[data-style]').forEach(input => input.addEventListener('input', () => { const k = input.dataset.style; b.style[k] = input.type === 'checkbox' ? input.checked : input.value; updateSelectedDom(b); save(); }));
       app.querySelectorAll('[data-file]').forEach(input => input.addEventListener('change', async () => {
         const file = input.files?.[0]; if (!file) return;
@@ -492,7 +486,7 @@
     app.querySelectorAll(`[data-${prefix}-prop]`).forEach(input => { out[input.dataset[`${prefix}Prop`]] = input.dataset[`${prefix}Prop`] === 'time' ? (Number(input.value) || 0) : input.value; });
     app.querySelectorAll(`[data-${prefix}-list]`).forEach(input => { out[input.dataset[`${prefix}List`]] = input.value.split('\n').filter(Boolean); });
     const correct = app.querySelector(`[data-${prefix}-correct]`);
-    if (correct) out.correct = correct.value.split(',').map(x => Number(x.trim())).filter(Number.isFinite);
+    if (correct) out.correct = correct.value.split(',').map(x => Number(x.trim()) - 1).filter(x => Number.isFinite(x) && x >= 0);
     const pairRows = [...app.querySelectorAll(`[data-${prefix}pair-item]`)];
     if (pairRows.length) {
       out.pairs = pairRows.map(input => {
@@ -551,7 +545,7 @@
     function bindPropertiesForSingle() {
       app.querySelectorAll('[data-prop]').forEach(input => input.addEventListener('input', () => { block[input.dataset.prop] = input.value; render(); }));
       app.querySelectorAll('[data-prop-list]').forEach(input => input.addEventListener('input', () => { block[input.dataset.propList] = input.value.split('\n').filter(Boolean); render(); }));
-      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { block.correct = e.target.value.split(',').map(x=>Number(x.trim())).filter(Number.isFinite); save(); });
+      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { block.correct = e.target.value.split(',').map(x=>Number(x.trim())-1).filter(Number.isFinite).filter(x=>x>=0); save(); });
       app.querySelectorAll('[data-style]').forEach(input => input.addEventListener('input', () => { block.style[input.dataset.style] = input.type==='checkbox'?input.checked:input.value; render(); }));
       app.querySelectorAll('[data-file]').forEach(input => input.addEventListener('change', async () => {
         const file = input.files?.[0]; if (!file) return;
@@ -601,7 +595,6 @@
           </div>
           <aside class="iv-side-panel">
             <h2>${selected ? 'Ausgewählte Interaktion bearbeiten' : 'Neue Interaktion anlegen'}</h2>
-            <div class="iv-time-tools"><label>Sekunde <input id="draftTime" type="number" step="0.1" min="0" value="${esc(formAction.time)}"></label><button class="btn" id="takeTime" type="button">Aktuelle Zeit übernehmen</button></div>
             ${renderActionBuilder(formAction, 'singleiv', !!selected)}
             <button class="btn danger" id="deleteAction" type="button" ${selected ? '' : 'disabled'}>Ausgewählte Aktion löschen</button>
           </aside>
@@ -613,8 +606,6 @@
 
     function readCurrentForm(base = draftAction) {
       const action = readActionFromForm('singleiv', base);
-      const time = app.querySelector('#draftTime');
-      if (time) action.time = Number(time.value) || 0;
       return normalizeAction(action);
     }
 
@@ -626,9 +617,9 @@
         const url = URL.createObjectURL(file);
         data.media = url; data._objectUrl = url; data._assetName = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'); mediaFileStore.set(data.id, file); save(); render();
       });
-      app.querySelector('#takeTime')?.addEventListener('click', () => { const v = app.querySelector('.live-iv-preview video'); const t = app.querySelector('#draftTime'); if (t) t.value = v ? v.currentTime.toFixed(1) : '0'; });
+      app.querySelector('#takeTime')?.addEventListener('click', () => { const v = app.querySelector('.live-iv-preview video'); const t = app.querySelector('[data-singleiv-prop="time"]'); if (t) { t.value = v ? v.currentTime.toFixed(1) : '0'; t.dispatchEvent(new Event('input', { bubbles: true })); } });
       app.querySelector('[data-singleiv-type]')?.addEventListener('change', () => { const next = readCurrentForm(selectedAction() || draftAction); next.type = app.querySelector('[data-singleiv-type]').value; if (selectedAction()) { Object.assign(selectedAction(), next); } else { draftAction = next; } save(); render(); });
-      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleiv-overlay], [data-singleiv-overlay-check], [data-singleivpair-item], [data-singleivpair-target], #draftTime').forEach(input => input.addEventListener('input', () => {
+      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleiv-overlay], [data-singleiv-overlay-check], [data-singleivpair-item], [data-singleivpair-target]').forEach(input => input.addEventListener('input', () => {
         const next = readCurrentForm(selectedAction() || draftAction);
         if (selectedAction()) { Object.assign(selectedAction(), next); seekAndPreview(selectedAction()); } else { draftAction = next; }
         save(); refreshIvStage();
@@ -656,19 +647,12 @@
     overlay.hidden = false;
     overlay.setAttribute('style', ivOverlayStyle(action));
     overlay.classList.add('editing-overlay');
-    overlay.innerHTML = `<div class="iv-overlay-drag" title="Overlay verschieben"></div><div class="iv-card"><h3 contenteditable="true" data-overlay-edit="question">${esc(action.question || 'Interaktion')}</h3><p contenteditable="true" data-overlay-edit="description">${esc(action.description || '')}</p>${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Overlay schließen</button></div></div>`;
-    overlay.querySelectorAll('[data-overlay-edit]').forEach(el => el.addEventListener('input', () => { action[el.dataset.overlayEdit] = el.innerText; onChange?.(); }));
+    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Overlay schließen</button></div></div>`;
     attachRunHandlers(overlay, () => action);
     overlay.querySelector('.continue-video')?.addEventListener('click', () => { overlay.hidden = true; overlay.classList.remove('editing-overlay'); });
-    const drag = overlay.querySelector('.iv-overlay-drag'); let start = null;
-    drag?.addEventListener('mousedown', e => { e.preventDefault(); const parent = overlay.parentElement.getBoundingClientRect(); start = { x:e.clientX, y:e.clientY, left:Number(action.overlay?.left ?? 6), top:Number(action.overlay?.top ?? 58), pw:parent.width, ph:parent.height }; });
-    const move = e => { if (!start) return; action.overlay = action.overlay || {}; action.overlay.left = Math.max(0, Math.min(95, start.left + ((e.clientX-start.x)/start.pw)*100)); action.overlay.top = Math.max(0, Math.min(95, start.top + ((e.clientY-start.y)/start.ph)*100)); overlay.setAttribute('style', ivOverlayStyle(action)); };
-    const up = () => { if (start) { start = null; onChange?.(); } document.removeEventListener('mousemove', move); };
-    document.addEventListener('mousemove', move);
-    document.addEventListener('mouseup', up, { once: true });
   }
 
-  function exportCss() { return `body{font-family:Inter,system-ui,sans-serif;margin:0;padding:32px;color:#111827;background:#fff}main{max-width:1200px;margin:0 auto}h1{letter-spacing:-.035em}.export-stage{position:relative;border:1px solid #cbd5e1;background:#fff;overflow:hidden}.free-block{position:absolute;border:1px solid rgba(47,95,143,.4);padding:12px;overflow:auto;box-shadow:none;background:#fff}.media-video,.youtube-frame{width:100%;height:100%;border:0;background:#111}.media-img{max-width:100%;max-height:100%;display:block}.choice-stack,.word-bank,.dnd-bank{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 26px}.choice-option,.chip,.dnd-item{border:1px solid #cbd5e1;padding:10px 14px;background:#fff;border-radius:18px;font-weight:760;cursor:pointer}.choice-option.is-correct,.dtw-blank.is-correct,.dnd-item.is-correct{background:#dcfce7}.choice-option.is-wrong{background:#fee2e2}.dnd-target-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:20px;margin:24px 0 30px}.dnd-target{min-height:155px;border:1.5px dashed #2f5f8f;padding:16px;background:#eef6ff}.dtw-blank{display:inline-flex;min-width:110px;min-height:34px;margin:0 6px 8px;padding:4px 8px;border:1.5px dashed #2f5f8f;background:#e8f2fb;vertical-align:middle}.feedback{margin-top:18px;padding:14px;background:#e8f2fb;border:1px solid rgba(47,95,143,.3)}button,.check-choice,.check-dtw,.check-dnd,.retry-activity,.continue-video{appearance:none;-webkit-appearance:none;border:1px solid rgba(47,95,143,.35);background:#fff!important;background-image:none!important;color:#173d63;font-weight:800;padding:11px 15px;cursor:pointer;box-shadow:none!important;text-shadow:none!important;filter:none!important}.check-choice,.check-dtw,.check-dnd,.continue-video{background:#2f6fa9!important;color:#fff!important;border-color:#2f6fa9!important}.test-button-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.glass-overlay{position:absolute;left:5%;right:5%;bottom:7%;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);padding:24px;box-shadow:0 18px 40px rgba(17,24,39,.2)}.iv-stage{position:relative;width:100%;height:100%}.progress{height:8px;background:#e5e7eb}.progress span{display:block;height:100%;background:#2f5f8f}nav{display:flex;gap:12px;align-items:center;margin-top:18px}`; }
+  function exportCss() { return `body{font-family:Inter,system-ui,sans-serif;margin:0;padding:32px;color:#111827;background:#fff}main{max-width:1200px;margin:0 auto}h1{letter-spacing:-.035em}.export-stage{position:relative;border:1px solid #cbd5e1;background:#fff;overflow:hidden}.free-block{position:absolute;border:1px solid rgba(47,95,143,.4);padding:12px;overflow:auto;box-shadow:none;background:#fff}.media-video,.youtube-frame{width:100%;height:100%;border:0;background:#111}.media-img{max-width:100%;max-height:100%;display:block}.choice-stack,.word-bank,.dnd-bank{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 26px}.choice-option,.chip,.dnd-item{border:1px solid #cbd5e1;padding:10px 14px;background:#fff;border-radius:18px;font-weight:760;cursor:pointer}.choice-option.is-correct,.dtw-blank.is-correct,.dnd-item.is-correct{background:#dcfce7}.choice-option.is-wrong{background:#fee2e2}.dnd-target-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:20px;margin:24px 0 30px}.dnd-target{min-height:155px;border:1.5px dashed #2f5f8f;padding:16px;background:#eef6ff}.dtw-blank{display:inline-flex;min-width:110px;min-height:34px;margin:0 6px 8px;padding:4px 8px;border:1.5px dashed #2f5f8f;background:#e8f2fb;vertical-align:middle}.feedback{margin-top:18px;padding:14px;background:#e8f2fb;border:1px solid rgba(47,95,143,.3)}button,.check-choice,.check-dtw,.check-dnd,.retry-activity,.continue-video{appearance:none;-webkit-appearance:none;border:1px solid rgba(47,95,143,.35);background:#fff!important;background-image:none!important;color:#173d63;font-weight:800;padding:11px 15px;cursor:pointer;box-shadow:none!important;text-shadow:none!important;filter:none!important}.check-choice,.check-dtw,.check-dnd,.continue-video{background:#2f6fa9!important;color:#fff!important;border-color:#2f6fa9!important}.test-button-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.glass-overlay{position:absolute;left:50%;top:50%;width:min(86%,920px);max-height:78%;transform:translate(-50%,-50%);background:rgba(255,255,255,.88);backdrop-filter:blur(12px);padding:24px;box-shadow:none;border:1px solid transparent;overflow:auto}.iv-stage{position:relative;width:100%;height:100%}.progress{height:8px;background:#e5e7eb}.progress span{display:block;height:100%;background:#2f5f8f}nav{display:flex;gap:12px;align-items:center;margin-top:18px}`; }
     function exportRuntime() { return `(() => { const DATA=window.ACTIVITY_DATA||{}; let active=0; const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); const yt=u=>/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/i.test(u||''); const yid=u=>{const m=String(u||'').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);return m?m[1]:''}; function media(src){if(!src)return '<p>Kein Medium.</p>'; if(yt(src))return '<iframe class="youtube-frame" src="https://www.youtube.com/embed/'+esc(yid(src))+'?rel=0" allowfullscreen></iframe>'; return '<video class="media-video" src="'+esc(src)+'" controls></video>';} function choice(b){const multi=(b.correct||[]).length>1;return '<div data-run="choice"><h3>'+esc(b.question)+'</h3><p>'+esc(b.description||'')+'</p><div class="choice-stack">'+(b.answers||[]).map((a,i)=>'<label class="choice-option"><input type="'+(multi?'checkbox':'radio')+'" name="c'+esc(b.id)+'" value="'+i+'"> '+esc(a)+'</label>').join('')+'</div><div class="test-button-row"><button class="check-choice">Prüfen</button><button class="retry-activity">Neuer Versuch</button></div><div class="feedback" hidden></div></div>';} function dtw(b){let words=[];let h=esc(b.dragText||'').replace(/\[([^\]]+)\]/g,(_,w)=>{words.push(w);return '<span class="dtw-blank" data-answer="'+esc(w)+'"></span>'});return '<div data-run="dragWords"><p>'+h+'</p><div class="word-bank">'+words.map(w=>'<button class="chip" draggable="true">'+esc(w)+'</button>').join('')+'</div><div class="test-button-row"><button class="check-dtw">Prüfen</button><button class="retry-activity">Neuer Versuch</button></div><div class="feedback" hidden></div></div>';} function dnd(b){const targets=[...new Set((b.pairs||[]).map(p=>p.target))];return '<div data-run="dragDrop"><p>'+esc(b.description||'')+'</p><div class="dnd-bank">'+(b.pairs||[]).map(p=>'<button class="dnd-item" draggable="true" data-target="'+esc(p.target)+'">'+esc(p.item)+'</button>').join('')+'</div><div class="dnd-target-grid">'+targets.map(t=>'<div class="dnd-target" data-target="'+esc(t)+'"><strong>'+esc(t)+'</strong></div>').join('')+'</div><div class="test-button-row"><button class="check-dnd">Prüfen</button><button class="retry-activity">Neuer Versuch</button></div><div class="feedback" hidden></div></div>';} function content(b){if(b.type==='text')return b.richText||''; if(b.type==='link')return '<a href="'+esc(b.url||'#')+'" target="_blank">'+esc(b.linkText||'Link')+'</a>'; if(b.type==='image')return b.media?'<img class="media-img" src="'+esc(b.media)+'">':'<p>Kein Bild.</p>'; if(b.type==='video')return media(b.media); if(b.type==='interactiveVideo')return '<div class="iv-stage" data-interactions="'+esc(JSON.stringify(b.interactions||[]))+'">'+media(b.media)+'<div class="glass-overlay" hidden></div></div>'; if(b.type==='choice')return choice(b); if(b.type==='dragWords')return dtw(b); if(b.type==='dragDrop')return dnd(b); return '';} function render(){const pages=DATA.pages||[];const p=pages[active]||{blocks:[]};document.getElementById('viewer').innerHTML='<div class="progress"><span style="width:'+(((active+1)/(pages.length||1))*100)+'%"></span></div><h2>'+esc(p.title||'Seite')+'</h2><section class="export-stage" style="width:'+(DATA.stageWidth||1200)+'px;height:'+(DATA.stageHeight||700)+'px">'+(p.blocks||[]).map(b=>'<article class="free-block" style="left:'+(b.style?.x||0)+'px;top:'+(b.style?.y||0)+'px;width:'+(b.style?.width||300)+'px;height:'+(b.style?.height||160)+'px;z-index:'+(b.style?.z||1)+';background:'+(b.style?.bgTransparent?'transparent':(b.style?.bgColor||'#fff'))+';border-color:'+(b.style?.showBorder===false?'transparent':'rgba(47,95,143,.4)')+';box-shadow:'+(b.style?.showShadow===true?'0 8px 22px rgba(17,24,39,.09)':'none')+'">'+content(b)+'</article>').join('')+'</section>';document.getElementById('count').textContent=(active+1)+' von '+pages.length;attach();} function attach(){let dragged=null;document.querySelectorAll('.chip,.dnd-item').forEach(e=>{e.ondragstart=()=>dragged=e;e.onclick=()=>dragged=e});document.querySelectorAll('.dtw-blank').forEach(b=>{const p=()=>{if(dragged?.classList.contains('chip')){b.textContent=dragged.textContent;b.dataset.filled=dragged.textContent;dragged.remove();dragged=null}};b.ondragover=e=>e.preventDefault();b.ondrop=p;b.onclick=p});document.querySelectorAll('.dnd-target').forEach(z=>{const p=()=>{if(dragged?.classList.contains('dnd-item')){z.appendChild(dragged);dragged=null}};z.ondragover=e=>e.preventDefault();z.ondrop=p;z.onclick=p});document.querySelectorAll('.check-choice,.check-dtw,.check-dnd').forEach(btn=>btn.onclick=()=>{const root=btn.closest('[data-run]');const f=root?.querySelector('.feedback');if(!root||!f)return; if(root.dataset.run==='choice'){f.hidden=false;f.textContent='Geprüft.';} if(root.dataset.run==='dragWords'){const blanks=[...root.querySelectorAll('.dtw-blank')];const ok=blanks.length&&blanks.every(b=>b.dataset.filled===b.dataset.answer);blanks.forEach(b=>b.classList.toggle('is-correct',b.dataset.filled===b.dataset.answer));f.hidden=false;f.textContent=ok?'Alles richtig.':'Noch nicht alles richtig.';} if(root.dataset.run==='dragDrop'){const items=[...root.querySelectorAll('.dnd-target .dnd-item')];const all=root.querySelectorAll('.dnd-item').length;const ok=items.length===all&&items.every(i=>i.dataset.target===i.parentElement.dataset.target);items.forEach(i=>i.classList.toggle('is-correct',i.dataset.target===i.parentElement.dataset.target));f.hidden=false;f.textContent=ok?'Alles richtig.':'Einige Zuordnungen stimmen noch nicht.';}});document.querySelectorAll('.retry-activity').forEach(btn=>btn.onclick=()=>render());document.querySelectorAll('.iv-stage').forEach(s=>{const v=s.querySelector('video'),o=s.querySelector('.glass-overlay');if(!v||!o)return;let as=[];try{as=JSON.parse(s.dataset.interactions||'[]').map(x=>({...x,done:false}))}catch{}v.ontimeupdate=()=>{const a=as.find(x=>!x.done&&v.currentTime>=Number(x.time));if(!a)return;a.done=true;v.pause();o.hidden=false;o.innerHTML='<h3>'+esc(a.question)+'</h3><p>'+esc(a.description||'')+'</p><button class="continue-video">Weiter</button>';o.querySelector('button').onclick=()=>{o.hidden=true;v.play().catch(()=>{})}}})} document.getElementById('prev').onclick=()=>{active=Math.max(0,active-1);render()};document.getElementById('next').onclick=()=>{active=Math.min((DATA.pages||[]).length-1,active+1);render()};render(); })();`; }
   async function downloadActivityZip(data, name) { const prepared = prepareExportData(data); const files = [{name:'index.html',content:exportIndex(prepared.data)},{name:'activity-data.js',content:exportData(prepared.data)},{name:'activity-runtime.js',content:exportRuntime()},{name:'activity-style.css',content:exportCss()},{name:'README.txt',content:'index.html öffnen. Lokale Medien liegen im Ordner assets, sofern sie in dieser Sitzung ausgewählt wurden.'}, ...prepared.assets]; downloadZip(`${name}.zip`, files); }
   function prepareExportData(data) { const clone = JSON.parse(JSON.stringify(data)); const assets = []; (clone.pages||[]).forEach(page => (page.blocks||[]).forEach(block => { const file = mediaFileStore.get(block.id); if (file && block._assetName) { block.media = block._assetName; assets.push({ name:block._assetName, blob:file }); } delete block._objectUrl; delete block._assetName; delete block._urlTimer; })); return { data: clone, assets }; }
