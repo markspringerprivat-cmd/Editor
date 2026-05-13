@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Multiple Choice – Editor</title>
+  <title>Single & Multiple Choice – Editor</title>
   <link rel="stylesheet" href="style.css?v=50" />
 </head>
 <body id="top" data-page="h5p-lite" data-activity="multiple-choice">
@@ -12,8 +12,8 @@
 
     <section class="iv-hero blind-readable uniform-hover" data-blind-target="h5p-lite-intro" tabindex="0" role="button" aria-label="Einführung vorlesen">
       <p class="eyebrow">Eigene H5P-ähnliche Testfunktion</p>
-      <h1>Multiple Choice</h1>
-      <p>Erstelle eine Frage mit mehreren Antwortmöglichkeiten und markiere die richtige Antwort. Die Vorschau gibt direkt Feedback.</p>
+      <h1>Single & Multiple Choice</h1>
+      <p>Erstelle eine Frage mit beliebig vielen Antwortmöglichkeiten. Wähle zwischen einer richtigen Antwort oder mehreren richtigen Antworten.</p>
     </section>
 
     <div class="blind-mode-row">
@@ -33,8 +33,8 @@
           <h2>Frage bearbeiten</h2>
           <div class="iv-field"><label for="questionInput">Frage</label><textarea id="questionInput"></textarea></div>
           <div class="iv-field"><label for="descriptionInput">Zusatztext</label><textarea id="descriptionInput"></textarea></div>
-          <div class="iv-field"><label for="answersInput">Antwortmöglichkeiten, eine pro Zeile</label><textarea id="answersInput"></textarea></div>
-          <div class="iv-field"><label for="correctInput">Richtige Antwort</label><select id="correctInput"></select></div>
+          <div class="iv-field"><label for="questionModeInput">Frageformat</label><select id="questionModeInput"><option value="single">Single Choice</option><option value="multiple">Multiple Choice</option></select></div>
+          <div class="iv-field"><label>Antwortmöglichkeiten</label><div class="mc-answer-list" id="answerList"></div><button class="iv-secondary-button" id="addAnswerButton" type="button">Antwort hinzufügen</button></div>
         </section>
         <section class="iv-list-panel h5p-lite-config-panel">
           <h2>Konfiguration</h2>

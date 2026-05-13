@@ -121,12 +121,60 @@
     });
   }
 
+
+
+  function attachHtmlPreview() {
+    const code = document.getElementById("htmlPreviewCode");
+    const file = document.getElementById("htmlPreviewFile");
+    const renderButton = document.getElementById("renderHtmlPreview");
+    const clearButton = document.getElementById("clearHtmlPreview");
+    const frame = document.getElementById("htmlPreviewFrame");
+    const status = document.getElementById("htmlPreviewStatus");
+    if (!code || !file || !renderButton || !frame) return;
+
+    const setStatus = (text) => { if (status) status.textContent = text; };
+    const render = () => {
+      const html = code.value.trim();
+      if (!html) {
+        frame.removeAttribute("srcdoc");
+        setStatus("Noch kein HTML geladen.");
+        return;
+      }
+      frame.srcdoc = html;
+      setStatus("Vorschau aktualisiert.");
+    };
+
+    file.addEventListener("change", async () => {
+      const selected = file.files && file.files[0];
+      if (!selected) return;
+      if (!/\.html?$/i.test(selected.name) && selected.type && selected.type !== "text/html") {
+        setStatus("Die ausgewählte Datei wirkt nicht wie eine HTML-Datei.");
+        return;
+      }
+      try {
+        code.value = await selected.text();
+        render();
+      } catch {
+        setStatus("Die Datei konnte nicht gelesen werden.");
+      }
+    });
+
+    renderButton.addEventListener("click", render);
+    clearButton?.addEventListener("click", () => {
+      code.value = "";
+      file.value = "";
+      frame.removeAttribute("srcdoc");
+      setStatus("Noch kein HTML geladen.");
+    });
+  }
+
   toggle?.addEventListener("click", () => setVorlesemodus(!readModeActive));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") stopSpeech();
   });
 
   attachReadMode();
+  attachHtmlPreview();
   if (new URLSearchParams(window.location.search).get("vorlesemodus") === "1") {
     setVorlesemodus(true, false);
   }

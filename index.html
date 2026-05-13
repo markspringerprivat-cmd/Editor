@@ -32,7 +32,7 @@
         <span class="eyebrow">Container</span><h2>Interactive Book</h2><p>Buchseiten mit unterschiedlichen Inhaltstypen und Aufgaben.</p>
       </a>
       <a class="h5p-lite-link-card blind-readable" href="multiple-choice.html#top" data-blind-target="h5p-lite-link">
-        <span class="eyebrow">Aufgabe</span><h2>Multiple Choice</h2><p>Fragen mit Antwortmöglichkeiten und Feedback.</p>
+        <span class="eyebrow">Aufgabe</span><h2>Single &amp; Multiple Choice</h2><p>Fragen mit dynamischen Antwortmöglichkeiten, Single- oder Multiple-Choice-Modus und Feedback.</p>
       </a>
       <a class="h5p-lite-link-card blind-readable" href="drag-the-words.html#top" data-blind-target="h5p-lite-link">
         <span class="eyebrow">Aufgabe</span><h2>Drag the Words</h2><p>Textlücken mit ziehbaren Begriffen.</p>
@@ -40,6 +40,28 @@
       <a class="h5p-lite-link-card blind-readable" href="drag-and-drop.html#top" data-blind-target="h5p-lite-link">
         <span class="eyebrow">Aufgabe</span><h2>Drag and Drop</h2><p>Begriffe und Zielbereiche mit Zuordnungsprüfung.</p>
       </a>
+    </section>
+
+    <section class="html-preview-panel blind-readable" data-blind-target="html-preview" tabindex="0" role="button" aria-label="HTML-Vorschau">
+      <div class="html-preview-head">
+        <div>
+          <p class="eyebrow">Vorschau</p>
+          <h2>HTML-Code anzeigen</h2>
+          <p>Lade eine HTML-Datei hoch oder füge HTML-Code ein. Die Vorschau wird lokal im Browser in einem isolierten Fenster angezeigt.</p>
+        </div>
+        <label class="iv-secondary-button html-file-label" for="htmlPreviewFile">HTML-Datei auswählen</label>
+        <input id="htmlPreviewFile" class="html-file-input" type="file" accept=".html,.htm,text/html" />
+      </div>
+      <div class="iv-field">
+        <label for="htmlPreviewCode">HTML-Code</label>
+        <textarea id="htmlPreviewCode" spellcheck="false" placeholder="<!doctype html>..."></textarea>
+      </div>
+      <div class="iv-button-row">
+        <button class="iv-primary-button" id="renderHtmlPreview" type="button">Vorschau anzeigen</button>
+        <button class="iv-secondary-button" id="clearHtmlPreview" type="button">Leeren</button>
+      </div>
+      <p class="lite-note" id="htmlPreviewStatus">Noch kein HTML geladen.</p>
+      <iframe id="htmlPreviewFrame" class="html-preview-frame" title="HTML-Vorschau" sandbox="allow-scripts allow-forms allow-popups allow-modals"></iframe>
     </section>
   </main>
   <script src="script.js?v=50"></script>
