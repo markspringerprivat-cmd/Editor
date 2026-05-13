@@ -3,7 +3,7 @@
 
   const editorType = document.body.dataset.editor;
   const app = document.getElementById('app');
-  const VERSION = '54';
+  const VERSION = '55';
 
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
@@ -40,7 +40,8 @@
       y: 70,
       width: type === 'interactiveVideo' || type === 'video' ? 620 : 360,
       height: type === 'interactiveVideo' || type === 'video' ? 360 : 170,
-      z: 1
+      z: 1,
+      showBorder: true
     };
   }
 
@@ -112,6 +113,7 @@
     const base = defaultBlock(block.type || 'text');
     const normalized = { ...base, ...block };
     normalized.style = { ...defaultStyle(normalized.type), ...(block.style || {}) };
+    if (typeof normalized.style.showBorder === 'undefined') normalized.style.showBorder = true;
     normalized.answers = Array.isArray(block.answers) && block.answers.length ? block.answers.map(String) : base.answers;
     normalized.correct = Array.isArray(block.correct) ? block.correct.map(Number) : [Number(block.correctIndex) || 0];
     normalized.pairs = Array.isArray(block.pairs) && block.pairs.length
@@ -133,8 +135,15 @@
             <option value="Times New Roman, serif">Times</option>
             <option value="Courier New, monospace">Courier</option>
           </select>
-          <select data-cmd="fontSize" title="Schriftgröße">
-            <option value="2">12</option><option value="3" selected>16</option><option value="4">18</option><option value="5">24</option><option value="6">32</option>
+          <select data-font-px title="Schriftgröße">
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16" selected>16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="24">24</option>
+            <option value="28">28</option>
+            <option value="32">32</option>
           </select>
         </div>
         <div class="toolbar-group">
@@ -149,17 +158,60 @@
           <button class="tb" type="button" data-cmd="justifyRight">Rechts</button>
         </div>
         <div class="toolbar-group">
-          <label>Schrift <input type="color" data-cmd="foreColor" value="#111827"></label>
-          <label>Markierung <input type="color" data-cmd="hiliteColor" value="#fff59d"></label>
+          <label>Schriftfarbe <input type="color" data-cmd="foreColor" value="#111827"></label>
         </div>
       </div>`;
   }
 
+  let savedSelection = null;
+
+  function rememberSelection() {
+    const selection = window.getSelection?.();
+    if (!selection || !selection.rangeCount) return;
+    const node = selection.anchorNode;
+    const element = node?.nodeType === 1 ? node : node?.parentElement;
+    if (element?.closest?.('.rich-text')) savedSelection = selection.getRangeAt(0).cloneRange();
+  }
+
+  document.addEventListener('selectionchange', rememberSelection);
+
+  function restoreSelection() {
+    if (!savedSelection) return;
+    const selection = window.getSelection?.();
+    if (!selection) return;
+    selection.removeAllRanges();
+    selection.addRange(savedSelection);
+  }
+
+  function applyFontSizePx(px) {
+    restoreSelection();
+    document.execCommand('fontSize', false, '7');
+    document.querySelectorAll('font[size="7"]').forEach((font) => {
+      const span = document.createElement('span');
+      span.style.fontSize = `${px}px`;
+      span.innerHTML = font.innerHTML;
+      font.replaceWith(span);
+    });
+    rememberSelection();
+  }
+
   function bindTextToolbar(root = document) {
     root.querySelectorAll('[data-cmd]').forEach((control) => {
-      const run = () => document.execCommand(control.dataset.cmd, false, control.value || null);
+      const run = () => {
+        restoreSelection();
+        document.execCommand(control.dataset.cmd, false, control.value || null);
+        rememberSelection();
+      };
       if (control.tagName === 'BUTTON') control.addEventListener('click', run);
-      else control.addEventListener('change', run);
+      else {
+        control.addEventListener('input', run);
+        control.addEventListener('change', run);
+      }
+    });
+    root.querySelectorAll('[data-font-px]').forEach((control) => {
+      const run = () => applyFontSizePx(control.value);
+      control.addEventListener('input', run);
+      control.addEventListener('change', run);
     });
   }
 
@@ -451,7 +503,7 @@
               <div class="stage-frame ${kind === 'book' ? 'book-frame' : 'presentation-frame'}">
                 <button class="stage-arrow stage-arrow-left" id="prevPage" type="button" aria-label="Vorherige ${label}" ${state.activePage === 0 ? 'disabled' : ''}>‹</button>
                 <div class="stage" id="stage" style="width:${Number(state.stageWidth) || 1280}px;height:${Number(state.stageHeight) || 720}px;">
-                  ${page.blocks.map((block) => `<article class="free-block ${state.selectedId === block.id ? 'is-selected' : ''}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="drag-handle" title="Zum Verschieben ziehen">${esc(typeLabel(block.type))}</div><div class="free-content">${renderBlockContent(block, true)}</div></article>`).join('')}
+                  ${page.blocks.map((block) => `<article class="free-block ${state.selectedId === block.id ? 'is-selected' : ''} ${(block.style?.showBorder === false) ? 'no-frame' : ''}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="drag-handle" title="Zum Verschieben ziehen" aria-label="Element verschieben"></div><div class="free-content">${renderBlockContent(block, true)}</div></article>`).join('')}
                 </div>
                 <button class="stage-arrow stage-arrow-right" id="nextPage" type="button" aria-label="Nächste ${label}" ${state.activePage === state.pages.length - 1 ? 'disabled' : ''}>›</button>
               </div>
@@ -468,11 +520,14 @@
       if (!block) return `<p class="hint">Wähle ein Element auf der ${label.toLowerCase()} aus.</p>`;
       const style = block.style || defaultStyle(block.type);
       return `
-        <div class="prop-grid compact-props">
-          <label>X <input data-style="x" type="number" value="${Number(style.x) || 0}"></label>
-          <label>Y <input data-style="y" type="number" value="${Number(style.y) || 0}"></label>
-          <label>Breite <input data-style="width" type="number" value="${Number(style.width) || 300}"></label>
-          <label>Höhe <input data-style="height" type="number" value="${Number(style.height) || 160}"></label>
+        <div class="props-section compact-actions">
+          <label class="inline-check"><input id="toggleFrame" type="checkbox" ${style.showBorder === false ? '' : 'checked'}> Rahmen anzeigen</label>
+          <div class="layer-actions">
+            <button id="layerBack" class="btn small" type="button">Eine Ebene nach hinten</button>
+            <button id="layerForward" class="btn small" type="button">Eine Ebene nach vorne</button>
+            <button id="layerBottom" class="btn small" type="button">Ganz nach hinten</button>
+            <button id="layerTop" class="btn small" type="button">Ganz nach vorne</button>
+          </div>
         </div>
         ${typeProps(block)}
         <button id="deleteBlock" class="btn danger" type="button">Element löschen</button>`;
@@ -584,6 +639,33 @@
         save();
       });
       app.querySelectorAll('[data-file]').forEach((input) => input.onchange = () => bindFieldFile(input));
+
+      app.querySelector('#toggleFrame')?.addEventListener('change', (event) => {
+        const block = selected();
+        if (!block) return;
+        block.style.showBorder = event.target.checked;
+        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
+        if (element) element.classList.toggle('no-frame', !block.style.showBorder);
+        save();
+      });
+      const moveLayer = (mode) => {
+        const block = selected();
+        if (!block) return;
+        const blocks = current().blocks;
+        const zs = blocks.map((item) => Number(item.style?.z) || 1);
+        if (mode === 'forward') block.style.z = (Number(block.style.z) || 1) + 1;
+        if (mode === 'back') block.style.z = Math.max(1, (Number(block.style.z) || 1) - 1);
+        if (mode === 'top') block.style.z = Math.max(...zs, 1) + 1;
+        if (mode === 'bottom') block.style.z = 1;
+        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
+        if (element) element.style.zIndex = block.style.z;
+        save();
+      };
+      app.querySelector('#layerForward')?.addEventListener('click', () => moveLayer('forward'));
+      app.querySelector('#layerBack')?.addEventListener('click', () => moveLayer('back'));
+      app.querySelector('#layerTop')?.addEventListener('click', () => moveLayer('top'));
+      app.querySelector('#layerBottom')?.addEventListener('click', () => moveLayer('bottom'));
+
       app.querySelector('#deleteBlock')?.addEventListener('click', () => {
         const page = current();
         page.blocks = page.blocks.filter((block) => block.id !== state.selectedId);

@@ -203,3 +203,111 @@
   .property-panel { position: static; }
   .stage-frame { padding-left: 54px; padding-right: 54px; }
 }
+
+/* v55: cleaner canvas elements, layers, border toggle, direct text formatting */
+.stage-frame {
+  padding: 0 !important;
+  background: #fff !important;
+}
+.presentation-frame,
+.book-frame {
+  min-height: auto !important;
+}
+.stage {
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  border: 1.4px solid rgba(17,24,39,.42) !important;
+  resize: both;
+}
+.stage-arrow {
+  z-index: 60;
+  background: rgba(255,255,255,.96);
+}
+.stage-arrow-left { left: 10px !important; }
+.stage-arrow-right { right: 10px !important; }
+.free-block {
+  display: flex;
+  flex-direction: column;
+  border: 1.2px solid rgba(17,24,39,.34) !important;
+  box-shadow: 0 8px 22px rgba(17,24,39,.055);
+  background: #fff;
+}
+.free-block.no-frame {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.free-block.no-frame.is-selected {
+  outline: 3px solid rgba(0,132,255,.62);
+}
+.drag-handle {
+  height: 12px !important;
+  min-height: 12px !important;
+  padding: 0 !important;
+  background: rgba(47,95,143,.18) !important;
+  border-bottom: 0 !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+}
+.free-block:not(.is-selected) .drag-handle {
+  opacity: .35;
+}
+.free-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc(100% - 12px);
+  overflow: auto;
+  padding: 12px;
+}
+.free-content .preview-video,
+.free-content .youtube-frame,
+.free-content video,
+.free-content iframe {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  object-fit: contain;
+  display: block;
+}
+.free-content .iv-stage {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.free-content .iv-stage .preview-video,
+.free-content .iv-stage .youtube-frame {
+  height: 100% !important;
+}
+.compact-actions {
+  border-top: 0 !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+.inline-check {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px !important;
+}
+.inline-check input { width: auto !important; }
+.layer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+.btn.small,
+.layer-actions .btn {
+  padding: 8px 10px;
+  font-size: .86rem;
+}
+.word-toolbar select[data-font-px] {
+  min-width: 78px;
+}
+.word-toolbar label input[type=color] {
+  width: 42px;
+  padding: 2px;
+}
