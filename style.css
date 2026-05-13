@@ -80,3 +80,36 @@ button::before,button::after,.btn::before,.btn::after{content:none!important;dis
 .refined-iv-builder .small-note{font-size:.88rem;margin:0}.refined-iv-builder .iv-builder-actions{border-top:1px solid rgba(17,24,39,.12);padding-top:14px;margin-top:0}
 .iv-side-panel{align-self:start;position:sticky;top:18px}.iv-side-panel h2{font-size:1.2rem;line-height:1.15}.iv-stage .glass-overlay{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(86%,920px)!important;height:auto!important;max-height:78%!important;background:rgba(255,255,255,.88)!important;color:#111827;border-color:transparent!important;box-shadow:none!important;padding:24px!important;resize:none!important;overflow:auto}.iv-stage .glass-overlay.editing-overlay{resize:none!important}.iv-stage .glass-overlay .iv-card{background:transparent!important;border:0!important;box-shadow:none!important;padding:0}.iv-stage .glass-overlay .activity-preview{background:#fff;border:0;box-shadow:none;padding:18px}.iv-overlay-drag{display:none!important}.iv-stage .glass-overlay .choice-stack{gap:12px;margin:18px 0 20px}.iv-stage .glass-overlay .test-button-row{margin-top:20px}.iv-stage .glass-overlay[hidden]{display:none!important}
 @media(max-width:980px){.refined-iv-builder .iv-top-row{grid-template-columns:1fr}.refined-iv-builder #takeTime{width:100%}.iv-side-panel{position:static}}
+
+
+/* v67 refinements */
+.iv-stage .glass-overlay,
+.iv-stage .glass-overlay .iv-card,
+.iv-stage .glass-overlay .activity-preview{
+  background: rgba(255,255,255,.90) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.iv-stage .glass-overlay{
+  border-radius:24px !important;
+  padding:24px !important;
+  overflow:auto;
+}
+.iv-stage .glass-overlay .iv-card,
+.iv-stage .glass-overlay .activity-preview{
+  border-radius:18px !important;
+}
+.iv-stage .glass-overlay .activity-preview{
+  border:1px solid rgba(255,255,255,.35)!important;
+  box-shadow:none!important;
+  margin:0;
+}
+.iv-stage .glass-overlay h3:first-child{margin-top:0}
+.inline-iv-split{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(340px,1.1fr);gap:16px;align-items:start}
+.inline-iv-left,.inline-iv-right{display:grid;gap:12px}
+.compact-list-shell{max-height:360px;overflow:auto}
+.container-work.course-work .stage-shell{min-width:0}
+.container-work.course-work .stage-frame{overflow:hidden !important; width:100%;}
+.course-slide-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.course-slide-strip h2{width:100%;margin:0 0 4px}
+@media (max-width:980px){.inline-iv-split{grid-template-columns:1fr}}

@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '66';
+  const VERSION = '67';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -113,12 +113,10 @@
 
   function ivOverlayStyle(action = {}) {
     const o = action.overlay || {};
-    const bg = o.bg || 'rgba(255,255,255,.88)';
-    const color = o.textColor || '#111827';
-    const border = o.border === true ? 'rgba(47,95,143,.28)' : 'transparent';
-    const shadow = o.shadow === true ? '0 18px 40px rgba(17,24,39,.16)' : 'none';
-    action.overlay = { ...o, bg, textColor: color, border: o.border === true, shadow: o.shadow === true };
-    return `left:50%;top:50%;width:min(86%,920px);max-height:78%;height:auto;right:auto;bottom:auto;transform:translate(-50%,-50%);background:${bg};color:${color};border:1px solid ${border};box-shadow:${shadow};`;
+    const bg = 'rgba(255,255,255,.90)';
+    const color = '#111827';
+    action.overlay = { ...o, bg, textColor: color, border: false, shadow: false };
+    return `left:50%;top:50%;width:min(86%,920px);max-height:78%;height:auto;right:auto;bottom:auto;transform:translate(-50%,-50%);background:${bg};color:${color};border:1px solid rgba(255,255,255,.55);box-shadow:0 18px 48px rgba(17,24,39,.18);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:24px;`;
   }
 
   function defaultPage(n = 1, label = 'Folie') {
@@ -318,7 +316,7 @@
   function actionSpecificFields(action, prefix = 'draft') {
     const a = normalizeAction(action);
     if (a.type === 'choice') {
-      return `<div class="iv-field-block full"><label>Antworten <textarea data-${prefix}-list="answers" rows="4">${esc(a.answers.join('\\n'))}</textarea></label><label>Richtige Antwort(en) <input data-${prefix}-correct value="${esc(humanCorrectValue(a.correct || [0]))}" placeholder="z. B. 1 oder 1,3"></label><p class="muted small-note">Die Zählung beginnt bei 1: Antwort 1, Antwort 2, Antwort 3 …</p></div>`;
+      return `<div class="iv-field-block full"><label>Antworten <textarea data-${prefix}-list="answers" rows="4">${esc(a.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en) <input data-${prefix}-correct value="${esc(humanCorrectValue(a.correct || [0]))}" placeholder="z. B. 1 oder 1,3"></label><p class="muted small-note">Die Zählung beginnt bei 1: Antwort 1, Antwort 2, Antwort 3 …</p></div>`;
     }
     if (a.type === 'dragWords') {
       return `<div class="iv-field-block full"><label>Text mit Lücken <textarea data-${prefix}-prop="dragText" rows="4">${esc(a.dragText)}</textarea></label><p class="muted small-note">Lücken mit eckigen Klammern markieren, z. B. [Wartezeit].</p></div>`;
@@ -354,12 +352,16 @@
     block.interactions = Array.isArray(block.interactions) ? block.interactions.map(normalizeAction) : [];
     const editingId = block._editingActionId || '';
     const editing = block.interactions.find(a => a.id === editingId);
-    const draft = editing || normalizeAction(block._draftAction || defaultAction('choice'));
-    return `<div class="inline-iv-editor upgraded-inline-iv">
-      <label class="iv-file-row">Lokale Videodatei <input type="file" accept="video/*" data-file="media"></label>
-      <p class="muted">Interaktives Video nutzt lokale Videodateien. Wähle eine Datei, lege eine Zeitmarke und eine Aktion an.</p>
-      <div class="iv-editor-section"><h3>${editing ? 'Ausgewählte Interaktion bearbeiten' : 'Neue Interaktion'}</h3>${renderActionBuilder(draft, 'inlineiv', !!editing)}</div>
-      <div class="iv-editor-section"><h3>Interaktionsliste</h3><div class="action-list compact-list">${block.interactions.length ? block.interactions.map((a,i)=>`<button class="${a.id===editingId?'active':''}" type="button" data-inline-action="${esc(a.id)}"><span>${Number(a.time).toFixed(1)} s</span><strong>${esc(a.question || `Interaktion ${i+1}`)}</strong><small>${esc(typeName(a.type))}</small></button>`).join('') : '<p class="muted">Noch keine Interaktion angelegt.</p>'}</div></div>
+    const draft = normalizeAction(block._draftAction || editing || defaultAction('choice'));
+    return `<div class="inline-iv-editor upgraded-inline-iv inline-iv-split">
+      <div class="inline-iv-left">
+        <label class="iv-file-row">Lokale Videodatei <input type="file" accept="video/*" data-file="media"></label>
+        <p class="muted">Wähle eine lokale Videodatei und lege darunter deine Interaktionen an.</p>
+        <div class="iv-editor-section compact-list-shell"><h3>Interaktionsliste</h3><div class="action-list compact-list">${block.interactions.length ? block.interactions.map((a,i)=>`<button class="${a.id===editingId?'active':''}" type="button" data-inline-action="${esc(a.id)}"><span class="time-pill">${Number(a.time).toFixed(1)} s</span><strong>${esc(a.question || `Interaktion ${i+1}`)}</strong><small>${esc(typeName(a.type))}</small></button>`).join('') : '<p class="muted">Noch keine Interaktion angelegt.</p>'}</div></div>
+      </div>
+      <div class="inline-iv-right">
+        <div class="iv-editor-section"><h3>${editing ? 'Ausgewählte Interaktion bearbeiten' : 'Neue Interaktion'}</h3>${renderActionBuilder(draft, 'inlineiv', !!editing)}</div>
+      </div>
     </div>`;
   }
 
@@ -393,8 +395,7 @@
       const page = current(); const pct = ((state.activePage + 1) / state.pages.length) * 100;
       const tabsHtml = `<aside class="page-tabs"><h2>${label}n</h2>${state.pages.map((p,i)=>`<button class="${i===state.activePage?'active':''}" data-page="${i}">${esc(p.title)}</button>`).join('')}<button data-new-page>+ ${label}</button></aside>`;
       const slideStrip = `<div class="course-slide-strip"><h2>Folien</h2>${state.pages.map((p,i)=>`<button class="${i===state.activePage?'active':''}" data-page="${i}">${esc(p.title)}</button>`).join('')}<button data-new-page>+ ${label}</button></div>`;
-      app.innerHTML = `<section class="editor-top compact-hero"><p class="eyebrow">Containerfunktion</p><h1>${esc(state.title)}</h1></section>
-        <div class="insert-toolbar"><button data-add="text">Textbox</button><button data-add="link">Link</button><button data-add="image">Bild</button><button data-add="video">Video</button><button data-add="interactiveVideo">Interaktives Video</button><button data-add="choice">Choice</button><button data-add="dragWords">Drag the Words</button><button data-add="dragDrop">Drag and Drop</button></div>
+      app.innerHTML = `<div class="insert-toolbar"><button data-add="text">Textbox</button><button data-add="link">Link</button><button data-add="image">Bild</button><button data-add="video">Video</button><button data-add="interactiveVideo">Interaktives Video</button><button data-add="choice">Choice</button><button data-add="dragWords">Drag the Words</button><button data-add="dragDrop">Drag and Drop</button></div>
         ${toolbarHtml()}
         <div id="propertiesHost">${propertiesHtml(selected())}</div>
         <section class="container-work ${kind === 'book' ? 'book-work' : 'course-work'}">
@@ -506,16 +507,41 @@
     block._draftAction = normalizeAction(block._draftAction || defaultAction('choice'));
     const selected = () => block.interactions.find(a => a.id === block._editingActionId);
     const refreshBlockPreview = () => { updateSelectedDom?.(block); save(); };
-    app.querySelector('[data-inlineiv-type]')?.addEventListener('change', () => { const next = readActionFromForm('inlineiv', selected() || block._draftAction); next.type = app.querySelector('[data-inlineiv-type]').value; if (selected()) Object.assign(selected(), next); else block._draftAction = next; save(); rerender(); });
-    app.querySelectorAll('[data-inlineiv-prop], [data-inlineiv-list], [data-inlineiv-correct], [data-inlineiv-overlay], [data-inlineiv-overlay-check], [data-inlineivpair-item], [data-inlineivpair-target]').forEach(input => input.addEventListener('input', () => { const next = readActionFromForm('inlineiv', selected() || block._draftAction); if (selected()) Object.assign(selected(), next); else block._draftAction = next; refreshBlockPreview(); }));
-    app.querySelector('[data-inlineiv-add]')?.addEventListener('click', () => { const action = readActionFromForm('inlineiv', selected() || block._draftAction); action.id = uid(); block.interactions.push(action); block._editingActionId = action.id; block._draftAction = normalizeAction(defaultAction(action.type)); save(); rerender(); });
-    app.querySelector('[data-inlineiv-update]')?.addEventListener('click', () => { const a = selected(); if (!a) return; Object.assign(a, readActionFromForm('inlineiv', a)); refreshBlockPreview(); rerender(); });
-    app.querySelectorAll('[data-inline-action]').forEach(btn => btn.onclick = () => { block._editingActionId = btn.dataset.inlineAction; const a = selected(); if (a) { block._draftAction = normalizeAction(a); } save(); rerender(); setTimeout(() => previewContainerAction(block, a), 60); });
-    app.querySelector(`[data-inlineivpair-add]`)?.addEventListener('click', () => { const target = selected() || block._draftAction; target.pairs.push({ item: '', target: '' }); if (!selected()) block._draftAction = target; save(); rerender(); });
-    app.querySelectorAll(`[data-inlineivpair-remove]`).forEach(btn => btn.onclick = () => { const target = selected() || block._draftAction; target.pairs.splice(Number(btn.dataset.inlineivpairRemove), 1); if (!selected()) block._draftAction = target; save(); rerender(); });
+    app.querySelector('[data-inlineiv-type]')?.addEventListener('change', () => {
+      block._draftAction = readActionFromForm('inlineiv', block._draftAction);
+      block._draftAction.type = app.querySelector('[data-inlineiv-type]').value;
+      rerender();
+    });
+    app.querySelectorAll('[data-inlineiv-prop], [data-inlineiv-list], [data-inlineiv-correct], [data-inlineivpair-item], [data-inlineivpair-target]').forEach(input => input.addEventListener('input', () => {
+      block._draftAction = readActionFromForm('inlineiv', block._draftAction);
+      if (selected()) previewContainerAction(block, block._draftAction);
+      refreshBlockPreview();
+    }));
+    app.querySelector('[data-inlineiv-add]')?.addEventListener('click', () => {
+      const action = normalizeAction(readActionFromForm('inlineiv', block._draftAction));
+      action.id = uid();
+      block.interactions.push(action);
+      block._editingActionId = action.id;
+      block._draftAction = normalizeAction(action);
+      save(); rerender();
+    });
+    app.querySelector('[data-inlineiv-update]')?.addEventListener('click', () => {
+      const a = selected(); if (!a) return;
+      const updated = normalizeAction(readActionFromForm('inlineiv', block._draftAction));
+      updated.id = a.id;
+      Object.assign(a, updated);
+      block._draftAction = normalizeAction(a);
+      refreshBlockPreview(); rerender();
+    });
+    app.querySelectorAll('[data-inline-action]').forEach(btn => btn.onclick = () => {
+      block._editingActionId = btn.dataset.inlineAction; const a = selected(); if (a) { block._draftAction = normalizeAction(a); }
+      save(); rerender(); setTimeout(() => previewContainerAction(block, block._draftAction), 60);
+    });
+    app.querySelector(`[data-inlineivpair-add]`)?.addEventListener('click', () => { block._draftAction.pairs.push({ item: '', target: '' }); save(); rerender(); });
+    app.querySelectorAll(`[data-inlineivpair-remove]`).forEach(btn => btn.onclick = () => { block._draftAction.pairs.splice(Number(btn.dataset.inlineivpairRemove), 1); save(); rerender(); });
   }
 
-  function previewContainerAction(block, action) {
+function previewContainerAction(block, action) {
     if (!action) return;
     const holder = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"] .iv-stage`);
     if (!holder) return;
@@ -532,7 +558,7 @@
     window.__singleBlock = block;
     const save = () => { window.__singleBlock = block; localStorage.setItem(storeKey, JSON.stringify(block)); };
     function render() {
-      app.innerHTML = `<section class="editor-top"><p class="eyebrow">Einzelfunktion</p><h1>${esc(typeName(type))}</h1></section>${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block active single-block" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
+      app.innerHTML = `${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block active single-block" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
       bindToolbar(app); bindSingleEvents(); attachRunHandlers(app, () => block); save();
     }
     function bindSingleEvents() {
@@ -585,9 +611,8 @@
 
     function render() {
       const selected = selectedAction();
-      const formAction = selected ? normalizeAction(selected) : draftAction;
-      app.innerHTML = `<section class="editor-top compact-hero"><p class="eyebrow">Einzelfunktion</p><h1>Interaktives Video</h1></section>
-        <section class="iv-studio">
+      const formAction = draftAction;
+      app.innerHTML = `<section class="iv-studio">
           <div class="iv-main-panel">
             <div class="iv-file-bar"><label>Lokale Videodatei <input id="videoFile" type="file" accept="video/*"></label><span class="muted">Nur lokale Videodateien. Die Datei wird beim ZIP-Export als Asset übernommen.</span></div>
             <div class="iv-preview live-iv-preview">${renderInteractiveVideo(data)}</div>
@@ -601,12 +626,11 @@
         </section>
         <div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button><button class="btn" id="clearLocal">Lokale Speicherung löschen</button></div>`;
       bindIvEvents(); attachRunHandlers(app, () => data); save();
-      if (selected) setTimeout(() => seekAndPreview(selected), 80);
+      if (selected) setTimeout(() => seekAndPreview(draftAction), 80);
     }
 
     function readCurrentForm(base = draftAction) {
-      const action = readActionFromForm('singleiv', base);
-      return normalizeAction(action);
+      return normalizeAction(readActionFromForm('singleiv', base));
     }
 
     function bindIvEvents() {
@@ -617,19 +641,51 @@
         const url = URL.createObjectURL(file);
         data.media = url; data._objectUrl = url; data._assetName = 'assets/' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_'); mediaFileStore.set(data.id, file); save(); render();
       });
-      app.querySelector('#takeTime')?.addEventListener('click', () => { const v = app.querySelector('.live-iv-preview video'); const t = app.querySelector('[data-singleiv-prop="time"]'); if (t) { t.value = v ? v.currentTime.toFixed(1) : '0'; t.dispatchEvent(new Event('input', { bubbles: true })); } });
-      app.querySelector('[data-singleiv-type]')?.addEventListener('change', () => { const next = readCurrentForm(selectedAction() || draftAction); next.type = app.querySelector('[data-singleiv-type]').value; if (selectedAction()) { Object.assign(selectedAction(), next); } else { draftAction = next; } save(); render(); });
-      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleiv-overlay], [data-singleiv-overlay-check], [data-singleivpair-item], [data-singleivpair-target]').forEach(input => input.addEventListener('input', () => {
-        const next = readCurrentForm(selectedAction() || draftAction);
-        if (selectedAction()) { Object.assign(selectedAction(), next); seekAndPreview(selectedAction()); } else { draftAction = next; }
-        save(); refreshIvStage();
+      app.querySelector('#takeTime')?.addEventListener('click', () => {
+        const v = app.querySelector('.live-iv-preview video');
+        const t = app.querySelector('[data-singleiv-prop="time"]');
+        if (t) { t.value = v ? v.currentTime.toFixed(1) : '0'; t.dispatchEvent(new Event('input', { bubbles: true })); }
+      });
+      app.querySelector('[data-singleiv-type]')?.addEventListener('change', () => {
+        draftAction = readCurrentForm(draftAction);
+        draftAction.type = app.querySelector('[data-singleiv-type]').value;
+        render();
+      });
+      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleivpair-item], [data-singleivpair-target]').forEach(input => input.addEventListener('input', () => {
+        draftAction = readCurrentForm(draftAction);
+        if (selectedAction()) seekAndPreview(draftAction);
       }));
-      app.querySelector('[data-singleiv-add]')?.addEventListener('click', () => { const action = readCurrentForm(selectedAction() || draftAction); action.id = uid(); data.interactions.push(action); selectedActionId = action.id; draftAction = normalizeAction(defaultAction(action.type)); save(); render(); });
-      app.querySelector('[data-singleiv-update]')?.addEventListener('click', () => { const a = selectedAction(); if (!a) return; Object.assign(a, readCurrentForm(a)); save(); render(); });
-      app.querySelector('#deleteAction')?.addEventListener('click', () => { const a = selectedAction(); if (!a) return; data.interactions = data.interactions.filter(x => x.id !== a.id); selectedActionId = null; save(); render(); });
-      app.querySelectorAll('[data-action]').forEach(btn => btn.onclick = () => { selectedActionId = btn.dataset.action; const a = selectedAction(); if (a) draftAction = normalizeAction(a); save(); render(); });
-      app.querySelector(`[data-singleivpair-add]`)?.addEventListener('click', () => { const t = selectedAction() || draftAction; t.pairs.push({ item:'', target:'' }); if (!selectedAction()) draftAction = t; save(); render(); });
-      app.querySelectorAll(`[data-singleivpair-remove]`).forEach(btn => btn.onclick = () => { const t = selectedAction() || draftAction; t.pairs.splice(Number(btn.dataset.singleivpairRemove),1); if (!selectedAction()) draftAction = t; save(); render(); });
+      app.querySelector('[data-singleiv-add]')?.addEventListener('click', () => {
+        const action = normalizeAction(readCurrentForm(draftAction));
+        action.id = uid();
+        data.interactions.push(action);
+        selectedActionId = action.id;
+        draftAction = normalizeAction(action);
+        save(); render();
+      });
+      app.querySelector('[data-singleiv-update]')?.addEventListener('click', () => {
+        const current = selectedAction(); if (!current) return;
+        const updated = normalizeAction(readCurrentForm(draftAction));
+        updated.id = current.id;
+        Object.assign(current, updated);
+        draftAction = normalizeAction(current);
+        save(); render();
+      });
+      app.querySelector('#deleteAction')?.addEventListener('click', () => {
+        const a = selectedAction(); if (!a) return;
+        data.interactions = data.interactions.filter(x => x.id !== a.id);
+        selectedActionId = null;
+        draftAction = normalizeAction(defaultAction('choice'));
+        save(); render();
+      });
+      app.querySelectorAll('[data-action]').forEach(btn => btn.onclick = () => {
+        selectedActionId = btn.dataset.action;
+        const a = selectedAction();
+        if (a) draftAction = normalizeAction(a);
+        save(); render();
+      });
+      app.querySelector(`[data-singleivpair-add]`)?.addEventListener('click', () => { draftAction.pairs.push({ item:'', target:'' }); render(); });
+      app.querySelectorAll(`[data-singleivpair-remove]`).forEach(btn => btn.onclick = () => { draftAction.pairs.splice(Number(btn.dataset.singleivpairRemove),1); render(); });
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title:'Interaktives Video', stageWidth:1200, stageHeight:720, pages:[{title:'Interaktives Video', blocks:[data]}] }, 'interactive-video-export');
       app.querySelector('#clearLocal').onclick = () => { localStorage.removeItem(storeKey); location.reload(); };
     }
@@ -643,11 +699,11 @@
     render();
   }
 
-  function showEditableIvOverlay(overlay, action, onChange = null) {
+function showEditableIvOverlay(overlay, action, onChange = null) {
     overlay.hidden = false;
     overlay.setAttribute('style', ivOverlayStyle(action));
     overlay.classList.add('editing-overlay');
-    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Overlay schließen</button></div></div>`;
+    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Weiter</button></div></div>`;
     attachRunHandlers(overlay, () => action);
     overlay.querySelector('.continue-video')?.addEventListener('click', () => { overlay.hidden = true; overlay.classList.remove('editing-overlay'); });
   }
