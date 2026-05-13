@@ -1854,3 +1854,227 @@ button[aria-label*="vorlesen"]:not(.blind-mode-toggle) {
   .embedded-product-frame-wrap { min-height: 560px; }
   .embedded-product-frame { height: 600px; }
 }
+
+
+/* v57: einheitlicher Banner-/Kartenstil für alle selbst erstellten Elemente */
+.h5p-lite-preview-panel,
+.h5p-lite-book-preview,
+.h5p-lite-slide-preview,
+.h5p-lite-question-preview,
+.h5p-lite-book-page,
+.h5p-lite-task,
+.lite-content-block,
+.container-side-panel,
+.container-main-panel,
+.container-preview-card,
+.container-edit-card,
+.iv-editor-panel,
+.iv-list-panel,
+.embedded-product-section,
+.embedded-course-presentation-section,
+.h5p-test-header,
+.interactive-video-start-card {
+  position: relative;
+  border: 1.3px solid rgba(17, 24, 39, 0.70);
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 18px 18px, rgba(17,24,39,0.032) 1px, transparent 1.8px),
+    radial-gradient(circle at 88% 16%, rgba(47,95,143,0.055), transparent 24%),
+    linear-gradient(135deg, #ffffff 0%, #fbfdff 100%);
+  background-size: 36px 36px, auto, auto;
+  box-shadow: var(--lift-shadow);
+  transition: transform var(--quick), box-shadow var(--quick), border-color var(--quick), background var(--quick);
+}
+
+.h5p-lite-preview-panel:hover,
+.h5p-lite-preview-panel:focus-within,
+.h5p-lite-book-preview:hover,
+.h5p-lite-book-preview:focus-within,
+.h5p-lite-slide-preview:hover,
+.h5p-lite-slide-preview:focus-within,
+.h5p-lite-question-preview:hover,
+.h5p-lite-question-preview:focus-within,
+.h5p-lite-book-page:hover,
+.h5p-lite-book-page:focus-within,
+.h5p-lite-task:hover,
+.h5p-lite-task:focus-within,
+.lite-content-block:hover,
+.lite-content-block:focus-within,
+.container-side-panel:hover,
+.container-side-panel:focus-within,
+.container-main-panel:hover,
+.container-main-panel:focus-within,
+.container-preview-card:hover,
+.container-preview-card:focus-within,
+.container-edit-card:hover,
+.container-edit-card:focus-within,
+.iv-editor-panel:hover,
+.iv-editor-panel:focus-within,
+.iv-list-panel:hover,
+.iv-list-panel:focus-within,
+.embedded-product-section:hover,
+.embedded-product-section:focus-within,
+.embedded-course-presentation-section:hover,
+.embedded-course-presentation-section:focus-within,
+.h5p-test-header:hover,
+.h5p-test-header:focus-within,
+.interactive-video-start-card:hover,
+.interactive-video-start-card:focus-within {
+  transform: translateY(-2px) scale(1.002);
+  border-color: var(--accent);
+  box-shadow: var(--blue-shadow);
+}
+
+.h5p-lite-preview-panel,
+.iv-editor-panel,
+.iv-list-panel,
+.container-side-panel,
+.container-main-panel {
+  padding: 22px;
+}
+
+.h5p-lite-slide-preview,
+.h5p-lite-question-preview,
+.h5p-lite-book-page,
+.h5p-lite-task,
+.lite-content-block {
+  padding: 28px 30px;
+  margin: 0 0 18px;
+}
+
+.container-preview-card {
+  padding: 18px;
+}
+
+.container-preview-card .h5p-lite-slide-preview,
+.container-preview-card .h5p-lite-question-preview,
+.embedded-course-presentation-player .lite-content-block {
+  min-height: 430px;
+  box-shadow: 6px 12px 22px rgba(17,24,39,.06);
+}
+
+.h5p-lite-slide-preview h2,
+.h5p-lite-question-preview h2,
+.h5p-lite-book-page h2,
+.h5p-lite-task h2,
+.lite-content-block h2 {
+  margin: 0 0 14px;
+  font-size: clamp(1.45rem, 2.2vw, 2.35rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.h5p-lite-slide-preview p,
+.h5p-lite-question-preview p,
+.h5p-lite-book-page p,
+.h5p-lite-task p,
+.lite-content-block p {
+  margin-top: 0;
+  color: #242b36;
+  line-height: 1.68;
+}
+
+.h5p-lite-answer-stack,
+.dtw-word-bank,
+.dnd-bank,
+.dnd-target-grid {
+  margin-top: 22px;
+}
+
+.iv-answer-button,
+.dtw-chip,
+.dnd-item,
+.h5p-lite-list-button,
+.container-tabs button,
+.iv-primary-button,
+.iv-secondary-button,
+.iv-danger-button {
+  transition: transform var(--quick), box-shadow var(--quick), border-color var(--quick), background var(--quick), color var(--quick);
+}
+
+.iv-answer-button,
+.dtw-chip,
+.dnd-item {
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 14px 14px, rgba(17,24,39,0.024) 1px, transparent 1.8px),
+    #ffffff;
+  background-size: 28px 28px, auto;
+  box-shadow: 4px 8px 15px rgba(17, 24, 39, 0.045);
+}
+
+.iv-answer-button:hover,
+.iv-answer-button:focus-visible,
+.dtw-chip:hover,
+.dtw-chip:focus-visible,
+.dnd-item:hover,
+.dnd-item:focus-visible,
+.h5p-lite-list-button:hover,
+.h5p-lite-list-button:focus-visible,
+.container-tabs button:hover,
+.container-tabs button:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: var(--blue-shadow);
+  outline: none;
+}
+
+.dtw-blank,
+.dnd-target {
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 14px 14px, rgba(47,95,143,0.05) 1px, transparent 1.8px),
+    rgba(232, 242, 251, 0.58);
+  background-size: 30px 30px, auto;
+}
+
+.container-tabs {
+  background:
+    radial-gradient(circle at 16px 16px, rgba(47,95,143,0.045) 1px, transparent 1.8px),
+    linear-gradient(135deg, rgba(232, 242, 251, .74), rgba(255,255,255,.92));
+  background-size: 32px 32px, auto;
+}
+
+.container-tabs button.is-active {
+  background: #ffffff;
+  box-shadow: inset 0 -3px 0 var(--accent), 0 8px 18px rgba(47, 95, 143, 0.08);
+}
+
+.container-workbench,
+.h5p-lite-layout,
+.iv-editor-stack,
+.compact-grid,
+.mc-answer-list {
+  gap: 18px;
+}
+
+.iv-field {
+  margin-bottom: 16px;
+}
+
+.iv-field label {
+  margin-bottom: 2px;
+}
+
+input,
+textarea,
+select {
+  border-radius: 2px;
+}
+
+@media (max-width: 760px) {
+  .h5p-lite-slide-preview,
+  .h5p-lite-question-preview,
+  .h5p-lite-book-page,
+  .h5p-lite-task,
+  .lite-content-block,
+  .h5p-lite-preview-panel,
+  .iv-editor-panel,
+  .iv-list-panel,
+  .container-side-panel,
+  .container-main-panel,
+  .container-preview-card,
+  .container-edit-card {
+    padding: 18px;
+  }
+}
