@@ -22,3 +22,6 @@ Version 56:
 
 
 Version 56: Element-Überschriften entfernt, Rahmen je Element ein-/ausblendbar, Ebenensteuerung ergänzt, Videoelemente skalieren im Element, Eigenschaftenleiste reduziert, Schriftfarben werden direkt angewendet.
+
+
+Version 57: Hintergrundtransparenz und Rahmen unabhängig; Griffleisten und Resize-Markierungen nur bei aktiv ausgewähltem Element sichtbar.

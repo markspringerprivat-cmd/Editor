@@ -695,7 +695,10 @@
         if (!block) return;
         block.style.showBorder = event.target.checked;
         const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element) element.classList.toggle('no-frame', !block.style.showBorder);
+        if (element) {
+          element.classList.toggle('no-frame', !block.style.showBorder);
+          element.style.setProperty('background', block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff'), 'important');
+        }
         save();
       });
       app.querySelector('#bgTransparent')?.addEventListener('change', (event) => {
@@ -703,7 +706,7 @@
         if (!block) return;
         block.style.bgTransparent = event.target.checked;
         const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element) element.style.background = block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff');
+        if (element) element.style.setProperty('background', block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff'), 'important');
         save();
       });
       app.querySelector('#bgColor')?.addEventListener('input', (event) => {
@@ -711,7 +714,7 @@
         if (!block) return;
         block.style.bgColor = event.target.value;
         const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element && !block.style.bgTransparent) element.style.background = block.style.bgColor;
+        if (element && !block.style.bgTransparent) element.style.setProperty('background', block.style.bgColor || '#ffffff', 'important');
         save();
       });
       const moveLayer = (mode) => {

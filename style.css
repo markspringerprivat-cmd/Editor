@@ -236,7 +236,6 @@
 .free-block.no-frame {
   border-color: transparent !important;
   box-shadow: none !important;
-  background: transparent !important;
 }
 .free-block.no-frame.is-selected {
   outline: 3px solid rgba(0,132,255,.62);
@@ -355,3 +354,51 @@
 .pair-row input { margin: 0 !important; }
 .pair-row .btn { min-height: 38px; padding: 6px 8px; }
 .property-panel input[type="color"] { min-height: 42px; padding: 3px !important; }
+
+
+/* v57: frame and background are independent; handles only exist visually when selected */
+.free-block {
+  position: absolute !important;
+  overflow: auto;
+}
+.free-block.no-frame {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.free-block.no-frame:not(.is-selected) {
+  outline: 0 !important;
+}
+.drag-handle {
+  display: none !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  z-index: 8;
+}
+.free-block.is-selected .drag-handle {
+  display: block !important;
+  opacity: 1 !important;
+  cursor: move;
+}
+.free-content {
+  height: 100% !important;
+  min-height: 100% !important;
+  padding: 14px;
+}
+.free-block:not(.is-selected) {
+  resize: none !important;
+}
+.free-block.is-selected {
+  resize: both !important;
+}
+.free-block:not(.is-selected)::-webkit-resizer {
+  display: none;
+}
