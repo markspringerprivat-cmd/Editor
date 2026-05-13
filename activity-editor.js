@@ -3,7 +3,7 @@
 
   const editorType = document.body.dataset.editor;
   const app = document.getElementById('app');
-  const VERSION = '55';
+  const VERSION = '56';
 
   const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
@@ -41,7 +41,9 @@
       width: type === 'interactiveVideo' || type === 'video' ? 620 : 360,
       height: type === 'interactiveVideo' || type === 'video' ? 360 : 170,
       z: 1,
-      showBorder: true
+      showBorder: true,
+      bgColor: '#ffffff',
+      bgTransparent: false
     };
   }
 
@@ -114,6 +116,8 @@
     const normalized = { ...base, ...block };
     normalized.style = { ...defaultStyle(normalized.type), ...(block.style || {}) };
     if (typeof normalized.style.showBorder === 'undefined') normalized.style.showBorder = true;
+    if (!normalized.style.bgColor) normalized.style.bgColor = '#ffffff';
+    normalized.style.bgTransparent = normalized.style.bgTransparent === true;
     normalized.answers = Array.isArray(block.answers) && block.answers.length ? block.answers.map(String) : base.answers;
     normalized.correct = Array.isArray(block.correct) ? block.correct.map(Number) : [Number(block.correctIndex) || 0];
     normalized.pairs = Array.isArray(block.pairs) && block.pairs.length
@@ -225,7 +229,8 @@
 
   function blockStyle(block) {
     const style = block.style || defaultStyle(block.type);
-    return `left:${Number(style.x) || 0}px;top:${Number(style.y) || 0}px;width:${Number(style.width) || 300}px;height:${Number(style.height) || 140}px;z-index:${Number(style.z) || 1}`;
+    const bg = style.bgTransparent ? 'transparent' : (style.bgColor || '#ffffff');
+    return `left:${Number(style.x) || 0}px;top:${Number(style.y) || 0}px;width:${Number(style.width) || 300}px;height:${Number(style.height) || 140}px;z-index:${Number(style.z) || 1};background:${bg}`;
   }
 
   function renderChoice(block) {
@@ -407,6 +412,22 @@
     });
   }
 
+
+  function renderPairsEditor(pairs = [], prefix = 'pair') {
+    const safePairs = Array.isArray(pairs) && pairs.length ? pairs : [{ item: '', target: '' }];
+    return `
+      <div class="pair-editor" data-pair-editor="${esc(prefix)}">
+        <div class="pair-editor-head"><span>Begriff</span><span>Zielbereich</span><span></span></div>
+        ${safePairs.map((pair, index) => `
+          <div class="pair-row">
+            <input data-${prefix}-item="${index}" value="${esc(pair.item || '')}" placeholder="Begriff / Beispiel">
+            <input data-${prefix}-target="${index}" value="${esc(pair.target || '')}" placeholder="Zielbereich">
+            <button class="btn small" type="button" data-${prefix}-remove="${index}" aria-label="Paar entfernen">×</button>
+          </div>`).join('')}
+        <button class="btn small" type="button" data-${prefix}-add>Weiteres Paar hinzufügen</button>
+      </div>`;
+  }
+
   function initContainer(kind) {
     const label = kind === 'book' ? 'Seite' : 'Folie';
     const storeKey = `lite-${kind}-v${VERSION}`;
@@ -498,9 +519,9 @@
               <button id="addPage" class="btn" type="button">${label} hinzufügen</button>
             </aside>
             <main class="stage-column">
-              ${progress()}
               <input class="title-input" id="pageTitle" value="${esc(page.title)}" aria-label="${label}titel">
               <div class="stage-frame ${kind === 'book' ? 'book-frame' : 'presentation-frame'}">
+                <div class="stage-progress-inside">${progress()}</div>
                 <button class="stage-arrow stage-arrow-left" id="prevPage" type="button" aria-label="Vorherige ${label}" ${state.activePage === 0 ? 'disabled' : ''}>‹</button>
                 <div class="stage" id="stage" style="width:${Number(state.stageWidth) || 1280}px;height:${Number(state.stageHeight) || 720}px;">
                   ${page.blocks.map((block) => `<article class="free-block ${state.selectedId === block.id ? 'is-selected' : ''} ${(block.style?.showBorder === false) ? 'no-frame' : ''}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="drag-handle" title="Zum Verschieben ziehen" aria-label="Element verschieben"></div><div class="free-content">${renderBlockContent(block, true)}</div></article>`).join('')}
@@ -522,6 +543,8 @@
       return `
         <div class="props-section compact-actions">
           <label class="inline-check"><input id="toggleFrame" type="checkbox" ${style.showBorder === false ? '' : 'checked'}> Rahmen anzeigen</label>
+          <label class="inline-check"><input id="bgTransparent" type="checkbox" ${style.bgTransparent ? 'checked' : ''}> Hintergrund transparent</label>
+          <label>Hintergrundfarbe <input id="bgColor" type="color" value="${esc(style.bgColor || '#ffffff')}"></label>
           <div class="layer-actions">
             <button id="layerBack" class="btn small" type="button">Eine Ebene nach hinten</button>
             <button id="layerForward" class="btn small" type="button">Eine Ebene nach vorne</button>
@@ -550,7 +573,7 @@
         return `<label>Text mit [Lücken] <textarea data-field="dragText">${esc(block.dragText || '')}</textarea></label>`;
       }
       if (block.type === 'dragDrop') {
-        return `<label>Paare: Begriff | Zielbereich <textarea data-pairs>${esc((block.pairs || []).map((pair) => `${pair.item} | ${pair.target}`).join('\n'))}</textarea></label>`;
+        return `<label>Paare</label>${renderPairsEditor(block.pairs || [], 'pair')}`;
       }
       return `<p class="hint">Text wird direkt in der Box bearbeitet. Markiere Text und nutze die Leiste oben.</p>`;
     }
@@ -629,6 +652,33 @@
         block.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite);
         save();
       });
+      const syncPairRows = () => {
+        const block = selected();
+        if (!block) return;
+        const rows = [...app.querySelectorAll('.pair-row')];
+        if (!rows.length) return;
+        block.pairs = rows.map((row) => ({
+          item: row.querySelector('[data-pair-item]')?.value?.trim() || '',
+          target: row.querySelector('[data-pair-target]')?.value?.trim() || ''
+        })).filter((pair) => pair.item || pair.target);
+        save();
+      };
+      app.querySelectorAll('[data-pair-item],[data-pair-target]').forEach((input) => input.addEventListener('input', syncPairRows));
+      app.querySelector('[data-pair-add]')?.addEventListener('click', () => {
+        const block = selected();
+        if (!block) return;
+        block.pairs = [...(block.pairs || []), { item: '', target: '' }];
+        save();
+        updateSelectedClass();
+      });
+      app.querySelectorAll('[data-pair-remove]').forEach((button) => button.addEventListener('click', () => {
+        const block = selected();
+        if (!block) return;
+        const index = Number(button.dataset.pairRemove);
+        block.pairs = (block.pairs || []).filter((_, i) => i !== index);
+        save();
+        updateSelectedClass();
+      }));
       app.querySelector('[data-pairs]')?.addEventListener('input', (event) => {
         const block = selected();
         if (!block) return;
@@ -646,6 +696,22 @@
         block.style.showBorder = event.target.checked;
         const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
         if (element) element.classList.toggle('no-frame', !block.style.showBorder);
+        save();
+      });
+      app.querySelector('#bgTransparent')?.addEventListener('change', (event) => {
+        const block = selected();
+        if (!block) return;
+        block.style.bgTransparent = event.target.checked;
+        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
+        if (element) element.style.background = block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff');
+        save();
+      });
+      app.querySelector('#bgColor')?.addEventListener('input', (event) => {
+        const block = selected();
+        if (!block) return;
+        block.style.bgColor = event.target.value;
+        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
+        if (element && !block.style.bgTransparent) element.style.background = block.style.bgColor;
         save();
       });
       const moveLayer = (mode) => {
@@ -784,7 +850,7 @@
     function singleProps(block) {
       if (block.type === 'choice') return `<label>Frage <input data-field="question" value="${esc(block.question)}"></label><label>Beschreibung <textarea data-field="description">${esc(block.description)}</textarea></label><label>Antworten <textarea data-list="answers">${esc(block.answers.join('\n'))}</textarea></label><label>Richtig, Nummern ab 0 <input data-correct value="${esc(block.correct.join(','))}"></label>`;
       if (block.type === 'dragWords') return `<label>Text mit [Lücken] <textarea data-field="dragText">${esc(block.dragText)}</textarea></label>`;
-      if (block.type === 'dragDrop') return `<label>Paare: Begriff | Zielbereich <textarea data-pairs>${esc(block.pairs.map((pair) => `${pair.item} | ${pair.target}`).join('\n'))}</textarea></label>`;
+      if (block.type === 'dragDrop') return `<label>Paare</label>${renderPairsEditor(block.pairs || [], 'pair')}`;
       return '';
     }
 
@@ -792,6 +858,18 @@
       app.querySelectorAll('[data-field]').forEach((input) => input.oninput = () => { data[input.dataset.field] = input.value; save(); render(); });
       app.querySelectorAll('[data-list]').forEach((input) => input.oninput = () => { data[input.dataset.list] = input.value.split('\n').map((item) => item.trim()).filter(Boolean); save(); render(); });
       app.querySelector('[data-correct]')?.addEventListener('input', (event) => { data.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite); save(); });
+      const syncSinglePairs = () => {
+        const rows = [...app.querySelectorAll('.pair-row')];
+        if (!rows.length) return;
+        data.pairs = rows.map((row) => ({
+          item: row.querySelector('[data-pair-item]')?.value?.trim() || '',
+          target: row.querySelector('[data-pair-target]')?.value?.trim() || ''
+        })).filter((pair) => pair.item || pair.target);
+        save();
+      };
+      app.querySelectorAll('[data-pair-item],[data-pair-target]').forEach((input) => input.addEventListener('input', syncSinglePairs));
+      app.querySelector('[data-pair-add]')?.addEventListener('click', () => { data.pairs = [...(data.pairs || []), { item: '', target: '' }]; save(); render(); });
+      app.querySelectorAll('[data-pair-remove]').forEach((button) => button.addEventListener('click', () => { const index = Number(button.dataset.pairRemove); data.pairs = (data.pairs || []).filter((_, i) => i !== index); save(); render(); }));
       app.querySelector('[data-pairs]')?.addEventListener('input', (event) => { data.pairs = event.target.value.split('\n').map((line) => { const [item, target] = line.split('|').map((part) => part?.trim()); return { item, target }; }).filter((pair) => pair.item && pair.target); save(); render(); });
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ kind: type, title: typeLabel(type), pages: [{ title: typeLabel(type), blocks: [data] }] }, `${type}-export`);
     }
@@ -835,7 +913,7 @@
           <label>Beschreibung <textarea data-action="description">${esc(action.description)}</textarea></label>
           ${action.type === 'choice' ? `<label>Antworten <textarea data-action-list="answers">${esc(action.answers.join('\n'))}</textarea></label><label>Richtig, Nummern ab 0 <input data-action-correct value="${esc(action.correct.join(','))}"></label>` : ''}
           ${action.type === 'dragWords' ? `<label>Text mit [Lücken] <textarea data-action="dragText">${esc(action.dragText)}</textarea></label>` : ''}
-          ${action.type === 'dragDrop' ? `<label>Paare: Begriff | Zielbereich <textarea data-action-pairs>${esc(action.pairs.map((pair) => `${pair.item} | ${pair.target}`).join('\n'))}</textarea></label>` : ''}
+          ${action.type === 'dragDrop' ? `<label>Paare</label>${renderPairsEditor(action.pairs || [], 'action-pair')}` : ''}
           <button id="deleteAction" class="btn danger" type="button">Aktion löschen</button>
         </div>`;
     }
@@ -876,6 +954,19 @@
       });
       app.querySelectorAll('[data-action-list]').forEach((input) => input.oninput = () => { if (!action) return; action[input.dataset.actionList] = input.value.split('\n').map((item) => item.trim()).filter(Boolean); save(); });
       app.querySelector('[data-action-correct]')?.addEventListener('input', (event) => { if (!action) return; action.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite); save(); });
+      const syncActionPairs = () => {
+        if (!action) return;
+        const rows = [...app.querySelectorAll('.pair-row')];
+        if (!rows.length) return;
+        action.pairs = rows.map((row) => ({
+          item: row.querySelector('[data-action-pair-item]')?.value?.trim() || '',
+          target: row.querySelector('[data-action-pair-target]')?.value?.trim() || ''
+        })).filter((pair) => pair.item || pair.target);
+        save();
+      };
+      app.querySelectorAll('[data-action-pair-item],[data-action-pair-target]').forEach((input) => input.addEventListener('input', syncActionPairs));
+      app.querySelector('[data-action-pair-add]')?.addEventListener('click', () => { if (!action) return; action.pairs = [...(action.pairs || []), { item: '', target: '' }]; save(); render(); });
+      app.querySelectorAll('[data-action-pair-remove]').forEach((button) => button.addEventListener('click', () => { if (!action) return; const index = Number(button.dataset.actionPairRemove); action.pairs = (action.pairs || []).filter((_, i) => i !== index); save(); render(); }));
       app.querySelector('[data-action-pairs]')?.addEventListener('input', (event) => { if (!action) return; action.pairs = event.target.value.split('\n').map((line) => { const [item, target] = line.split('|').map((part) => part?.trim()); return { item, target }; }).filter((pair) => pair.item && pair.target); save(); });
       app.querySelector('#deleteAction')?.addEventListener('click', () => { data.interactions.splice(selectedActionIndex, 1); save(); renderInteractiveVideoEditor(Math.max(0, selectedActionIndex - 1)); });
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ kind: type, title: 'Interaktives Video', pages: [{ title: 'Interaktives Video', blocks: [data] }] }, 'interactive-video-export');
@@ -893,7 +984,7 @@
   }
 
   function exportRuntime() {
-    return `(() => { const DATA = window.ACTIVITY_DATA || {}; const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); const isYoutube = u => /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)/i.test(u||''); const ytId = u => { const m = String(u||'').match(/(?:v=|youtu\\.be\\/|embed\\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : ''; }; let active = 0; const viewer = document.getElementById('viewer'); function media(src){ if(!src) return '<p>Kein Medium.</p>'; if(isYoutube(src)) return '<iframe class="youtube-frame" src="https://www.youtube.com/embed/'+esc(ytId(src))+'?rel=0" allowfullscreen></iframe>'; return '<video class="preview-video" src="'+esc(src)+'" controls></video>'; } function choice(b){ const multi=(b.correct||[]).length>1; return '<div data-run="choice"><h3>'+esc(b.question)+'</h3><p>'+esc(b.description||'')+'</p><div class="choice-stack">'+(b.answers||[]).map((a,i)=>'<label class="choice-option"><input type="'+(multi?'checkbox':'radio')+'" name="c'+esc(b.id)+'" value="'+i+'"> '+esc(a)+'</label>').join('')+'</div><button class="check-choice">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragWords(b){ let words=[]; const html=esc(b.dragText||'').replace(/\\[([^\\]]+)\\]/g,(_,w)=>{words.push(w);return '<span class="dtw-blank" data-answer="'+esc(w)+'"></span>'}); return '<div data-run="dragWords"><p>'+html+'</p><div class="word-bank">'+words.map(w=>'<button class="chip" draggable="true">'+esc(w)+'</button>').join('')+'</div><button class="check-dtw">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragDrop(b){ const targets=[...new Set((b.pairs||[]).map(p=>p.target))]; return '<div data-run="dragDrop"><p>'+esc(b.description||'')+'</p><div class="dnd-bank">'+(b.pairs||[]).map(p=>'<button class="dnd-item" draggable="true" data-target="'+esc(p.target)+'">'+esc(p.item)+'</button>').join('')+'</div><div class="dnd-target-grid">'+targets.map(t=>'<div class="dnd-target" data-target="'+esc(t)+'"><strong>'+esc(t)+'</strong></div>').join('')+'</div><button class="check-dnd">Prüfen</button><div class="feedback" hidden></div></div>'; } function content(b){ if(b.type==='text') return b.richText||''; if(b.type==='link') return '<a href="'+esc(b.url||'#')+'" target="_blank">'+esc(b.linkText||'Link öffnen')+'</a>'; if(b.type==='image') return b.media?'<img class="media" src="'+esc(b.media)+'" alt="'+esc(b.alt||'')+'">':'<p>Kein Bild.</p>'; if(b.type==='video') return media(b.media); if(b.type==='interactiveVideo') return '<div class="iv-stage" data-interactions="'+esc(JSON.stringify(b.interactions||[]))+'">'+media(b.media)+'<div class="glass-overlay" hidden></div></div>'; if(b.type==='choice') return choice(b); if(b.type==='dragWords') return dragWords(b); if(b.type==='dragDrop') return dragDrop(b); return ''; } function render(){ const pages=DATA.pages||[]; const page=pages[Math.max(0,Math.min(active,pages.length-1))]||{title:DATA.title||'Aktivität',blocks:[]}; const pct=pages.length?((active+1)/pages.length)*100:100; viewer.innerHTML='<div class="slide-progress"><div class="slide-progress-bar" style="width:'+pct+'%"></div></div><section class="export-page"><h2>'+esc(page.title||'Seite')+'</h2><div class="export-stage" style="width:'+(DATA.stageWidth||1180)+'px;height:'+(DATA.stageHeight||720)+'px">'+(page.blocks||[]).map(b=>'<article class="free-block" data-block-id="'+esc(b.id)+'" style="left:'+(b.style?.x||0)+'px;top:'+(b.style?.y||0)+'px;width:'+(b.style?.width||320)+'px;height:'+(b.style?.height||160)+'px">'+content(b)+'</article>').join('')+'</div></section>'; const c=document.getElementById('count'); if(c)c.textContent=pages.length?(active+1)+' von '+pages.length:''; attach(); } function attach(){ let dragged=null; document.querySelectorAll('.chip,.dnd-item').forEach(el=>{el.ondragstart=()=>dragged=el; el.onclick=()=>dragged=el;}); document.querySelectorAll('.dtw-blank').forEach(blank=>{const place=()=>{if(dragged?.classList.contains('chip')){blank.textContent=dragged.textContent; blank.dataset.filled=dragged.textContent; dragged.remove(); dragged=null;}}; blank.ondragover=e=>e.preventDefault(); blank.ondrop=place; blank.onclick=place;}); document.querySelectorAll('.dnd-target').forEach(zone=>{const place=()=>{if(dragged?.classList.contains('dnd-item')){zone.appendChild(dragged); dragged=null;}}; zone.ondragover=e=>e.preventDefault(); zone.ondrop=place; zone.onclick=place;}); document.querySelectorAll('.check-choice,.check-dtw,.check-dnd').forEach(btn=>btn.onclick=()=>{const f=btn.parentElement.querySelector('.feedback'); if(f){f.hidden=false; f.textContent='Eingabe gespeichert/geprüft.';}}); document.querySelectorAll('.iv-stage').forEach(stage=>{const video=stage.querySelector('video'); const overlay=stage.querySelector('.glass-overlay'); if(!video||!overlay)return; let actions=[]; try{actions=JSON.parse(stage.dataset.interactions||'[]').map(x=>({...x,done:false}));}catch{} video.ontimeupdate=()=>{const a=actions.find(x=>!x.done&&video.currentTime>=Number(x.time)); if(!a)return; a.done=true; video.pause(); overlay.hidden=false; overlay.innerHTML='<h3>'+esc(a.question)+'</h3><p>'+esc(a.description||'')+'</p><button>Weiter</button>'; overlay.querySelector('button').onclick=()=>{overlay.hidden=true; video.play().catch(()=>{});};};}); } document.getElementById('prev')?.addEventListener('click',()=>{active=Math.max(0,active-1);render();}); document.getElementById('next')?.addEventListener('click',()=>{active=Math.min((DATA.pages||[]).length-1,active+1);render();}); render(); })();`;
+    return `(() => { const DATA = window.ACTIVITY_DATA || {}; const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); const isYoutube = u => /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)/i.test(u||''); const ytId = u => { const m = String(u||'').match(/(?:v=|youtu\\.be\\/|embed\\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : ''; }; let active = 0; const viewer = document.getElementById('viewer'); function media(src){ if(!src) return '<p>Kein Medium.</p>'; if(isYoutube(src)) return '<iframe class="youtube-frame" src="https://www.youtube.com/embed/'+esc(ytId(src))+'?rel=0" allowfullscreen></iframe>'; return '<video class="preview-video" src="'+esc(src)+'" controls></video>'; } function choice(b){ const multi=(b.correct||[]).length>1; return '<div data-run="choice"><h3>'+esc(b.question)+'</h3><p>'+esc(b.description||'')+'</p><div class="choice-stack">'+(b.answers||[]).map((a,i)=>'<label class="choice-option"><input type="'+(multi?'checkbox':'radio')+'" name="c'+esc(b.id)+'" value="'+i+'"> '+esc(a)+'</label>').join('')+'</div><button class="check-choice">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragWords(b){ let words=[]; const html=esc(b.dragText||'').replace(/\\[([^\\]]+)\\]/g,(_,w)=>{words.push(w);return '<span class="dtw-blank" data-answer="'+esc(w)+'"></span>'}); return '<div data-run="dragWords"><p>'+html+'</p><div class="word-bank">'+words.map(w=>'<button class="chip" draggable="true">'+esc(w)+'</button>').join('')+'</div><button class="check-dtw">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragDrop(b){ const targets=[...new Set((b.pairs||[]).map(p=>p.target))]; return '<div data-run="dragDrop"><p>'+esc(b.description||'')+'</p><div class="dnd-bank">'+(b.pairs||[]).map(p=>'<button class="dnd-item" draggable="true" data-target="'+esc(p.target)+'">'+esc(p.item)+'</button>').join('')+'</div><div class="dnd-target-grid">'+targets.map(t=>'<div class="dnd-target" data-target="'+esc(t)+'"><strong>'+esc(t)+'</strong></div>').join('')+'</div><button class="check-dnd">Prüfen</button><div class="feedback" hidden></div></div>'; } function content(b){ if(b.type==='text') return b.richText||''; if(b.type==='link') return '<a href="'+esc(b.url||'#')+'" target="_blank">'+esc(b.linkText||'Link öffnen')+'</a>'; if(b.type==='image') return b.media?'<img class="media" src="'+esc(b.media)+'" alt="'+esc(b.alt||'')+'">':'<p>Kein Bild.</p>'; if(b.type==='video') return media(b.media); if(b.type==='interactiveVideo') return '<div class="iv-stage" data-interactions="'+esc(JSON.stringify(b.interactions||[]))+'">'+media(b.media)+'<div class="glass-overlay" hidden></div></div>'; if(b.type==='choice') return choice(b); if(b.type==='dragWords') return dragWords(b); if(b.type==='dragDrop') return dragDrop(b); return ''; } function render(){ const pages=DATA.pages||[]; const page=pages[Math.max(0,Math.min(active,pages.length-1))]||{title:DATA.title||'Aktivität',blocks:[]}; const pct=pages.length?((active+1)/pages.length)*100:100; viewer.innerHTML='<div class="slide-progress"><div class="slide-progress-bar" style="width:'+pct+'%"></div></div><section class="export-page"><h2>'+esc(page.title||'Seite')+'</h2><div class="export-stage" style="width:'+(DATA.stageWidth||1180)+'px;height:'+(DATA.stageHeight||720)+'px">'+(page.blocks||[]).map(b=>'<article class="free-block" data-block-id="'+esc(b.id)+'" style="left:'+(b.style?.x||0)+'px;top:'+(b.style?.y||0)+'px;width:'+(b.style?.width||320)+'px;height:'+(b.style?.height||160)+'px;background:'+(b.style?.bgTransparent?'transparent':(b.style?.bgColor||'#ffffff'))+';border-color:'+(b.style?.showBorder===false?'transparent':'rgba(17,24,39,.34)')+'">'+content(b)+'</article>').join('')+'</div></section>'; const c=document.getElementById('count'); if(c)c.textContent=pages.length?(active+1)+' von '+pages.length:''; attach(); } function attach(){ let dragged=null; document.querySelectorAll('.chip,.dnd-item').forEach(el=>{el.ondragstart=()=>dragged=el; el.onclick=()=>dragged=el;}); document.querySelectorAll('.dtw-blank').forEach(blank=>{const place=()=>{if(dragged?.classList.contains('chip')){blank.textContent=dragged.textContent; blank.dataset.filled=dragged.textContent; dragged.remove(); dragged=null;}}; blank.ondragover=e=>e.preventDefault(); blank.ondrop=place; blank.onclick=place;}); document.querySelectorAll('.dnd-target').forEach(zone=>{const place=()=>{if(dragged?.classList.contains('dnd-item')){zone.appendChild(dragged); dragged=null;}}; zone.ondragover=e=>e.preventDefault(); zone.ondrop=place; zone.onclick=place;}); document.querySelectorAll('.check-choice,.check-dtw,.check-dnd').forEach(btn=>btn.onclick=()=>{const f=btn.parentElement.querySelector('.feedback'); if(f){f.hidden=false; f.textContent='Eingabe gespeichert/geprüft.';}}); document.querySelectorAll('.iv-stage').forEach(stage=>{const video=stage.querySelector('video'); const overlay=stage.querySelector('.glass-overlay'); if(!video||!overlay)return; let actions=[]; try{actions=JSON.parse(stage.dataset.interactions||'[]').map(x=>({...x,done:false}));}catch{} video.ontimeupdate=()=>{const a=actions.find(x=>!x.done&&video.currentTime>=Number(x.time)); if(!a)return; a.done=true; video.pause(); overlay.hidden=false; overlay.innerHTML='<h3>'+esc(a.question)+'</h3><p>'+esc(a.description||'')+'</p><button>Weiter</button>'; overlay.querySelector('button').onclick=()=>{overlay.hidden=true; video.play().catch(()=>{});};};}); } document.getElementById('prev')?.addEventListener('click',()=>{active=Math.max(0,active-1);render();}); document.getElementById('next')?.addEventListener('click',()=>{active=Math.min((DATA.pages||[]).length-1,active+1);render();}); render(); })();`;
   }
 
   function downloadActivityZip(data, name) {

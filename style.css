@@ -311,3 +311,47 @@
   width: 42px;
   padding: 2px;
 }
+
+/* v56: transparent canvas elements, hidden resize until selection, pair grid editor, progress inside stage */
+.stage-progress-inside {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  background: rgba(255,255,255,.96);
+  padding: 8px 10px 4px;
+  border-bottom: 1px solid rgba(17,24,39,.12);
+}
+.stage-progress-inside .slide-progress { margin: 0 0 5px !important; }
+.stage-progress-inside .slide-count { margin: 0 !important; font-size: .82rem; }
+.drag-handle {
+  background: transparent !important;
+  border-bottom: 0 !important;
+  opacity: 0 !important;
+}
+.free-block.is-selected .drag-handle {
+  opacity: 1 !important;
+  background: transparent !important;
+}
+.free-block {
+  resize: none !important;
+}
+.free-block.is-selected {
+  resize: both !important;
+}
+.free-block.no-frame {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.free-block.no-frame.is-selected {
+  outline: 3px solid rgba(0,132,255,.62) !important;
+}
+.free-block.no-frame:not(.is-selected) {
+  outline: 0 !important;
+}
+.pair-editor { display: grid; gap: 9px; margin: 8px 0 16px; }
+.pair-editor-head,
+.pair-row { display: grid; grid-template-columns: 1fr 1fr 38px; gap: 8px; align-items: center; }
+.pair-editor-head { color: #5f6876; font-size: .82rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.pair-row input { margin: 0 !important; }
+.pair-row .btn { min-height: 38px; padding: 6px 8px; }
+.property-panel input[type="color"] { min-height: 42px; padding: 3px !important; }

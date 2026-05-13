@@ -1,4 +1,4 @@
-H5P-ähnliche Editor-Webseite – Version 55
+H5P-ähnliche Editor-Webseite – Version 56
 
 Dieses Paket enthält eine separate Editor-Webseite mit Containerfunktionen und Einzelfunktionen.
 
@@ -12,7 +12,7 @@ Einzelfunktionen:
 - Drag the Words
 - Drag and Drop
 
-Version 55:
+Version 56:
 - Course Presentation und Interactive Book mit Pfeilnavigation und Fortschrittsbalken.
 - Textboxen und Links werden als einfache Elemente eingefügt.
 - Elemente können auf der Arbeitsfläche verschoben und vergrößert werden.
@@ -21,4 +21,4 @@ Version 55:
 - Export als HTML-ZIP.
 
 
-Version 55: Element-Überschriften entfernt, Rahmen je Element ein-/ausblendbar, Ebenensteuerung ergänzt, Videoelemente skalieren im Element, Eigenschaftenleiste reduziert, Schriftfarben werden direkt angewendet.
+Version 56: Element-Überschriften entfernt, Rahmen je Element ein-/ausblendbar, Ebenensteuerung ergänzt, Videoelemente skalieren im Element, Eigenschaftenleiste reduziert, Schriftfarben werden direkt angewendet.
