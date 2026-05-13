@@ -16,3 +16,27 @@
 .inline-action-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .inline-action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .compact-pair-editor{min-width:0}
+
+/* v63: stabile, saubere Test- und Exportdarstellung */
+.btn,.btn.primary,.check-choice,.check-dtw,.check-dnd,.continue-video,.retry-activity,
+.insert-toolbar button,.format-toolbar button,.properties-strip button,.action-create button,.action-editor button,
+.inline-action-card button,.course-slide-strip button,.page-tabs button,.choice-option,.chip,.dnd-item {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  box-shadow: none;
+}
+.btn.primary,.check-choice,.check-dtw,.check-dnd,button.btn.primary {
+  background: #2f6fa9 !important;
+  background-color: #2f6fa9 !important;
+  color: #fff !important;
+  border-color: #2f6fa9 !important;
+}
+.btn.primary:hover,.check-choice:hover,.check-dtw:hover,.check-dnd:hover,button.btn.primary:hover {
+  background: #285f92 !important;
+  background-color: #285f92 !important;
+  transform: none !important;
+}
+.test-button-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px;align-items:center}.test-button-row .btn{margin:0}.feedback{margin-top:18px}.activity-preview{padding:4px}.activity-preview h3{margin-top:0}.activity-preview .choice-stack,.activity-preview .word-bank,.activity-preview .dnd-bank{margin-bottom:26px}.action-editor,.inline-action-card{border:1px solid rgba(17,24,39,.16);background:#fff;padding:16px;margin:14px 0;display:grid;gap:14px}.action-editor h3,.inline-action-card h3{margin:0}.inline-action-head{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(17,24,39,.12);padding-bottom:10px}.inline-action-grid,.action-editor{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}.action-editor > h3,.action-editor > .pair-editor,.action-editor > label:has(textarea),.action-editor > button{grid-column:1/-1}.inline-action-card .pair-editor,.inline-action-card textarea{grid-column:1/-1}.inline-iv-editor{display:grid;gap:16px}.inline-action-create{display:flex;flex-wrap:wrap;gap:12px;align-items:end;border:1px solid rgba(17,24,39,.12);background:#f8fafc;padding:14px}.iv-actions{display:grid;gap:16px}.action-create{border:1px solid rgba(17,24,39,.12);background:#f8fafc;padding:14px}.action-list{border-top:1px solid rgba(17,24,39,.12);padding-top:12px}.glass-overlay .activity-preview{background:#fff;padding:18px;border:1px solid rgba(17,24,39,.14)}
