@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>H5P-ähnliche Editoren</title>
-  <link rel="stylesheet" href="style.css?v=58" />
+  <link rel="stylesheet" href="style.css?v=59" />
 </head>
 <body id="top" data-page="h5p-lite-home">
   <main class="page-shell overview-shell">
@@ -38,20 +38,25 @@
       </div>
     </section>
 
-    <section class="home-section embedded-test-section" aria-labelledby="embeddedCourseTitle">
-      <p class="eyebrow">Eingebetteter Test</p>
-      <h2 id="embeddedCourseTitle">Fertige Course Presentation</h2>
-      <p class="section-intro">Diese exportierte Course Presentation ist unten direkt aus dem HTML-ZIP eingebunden. Die zugehörigen Dateien liegen im Ordner <code>embedded-course-export</code>.</p>
-      <div class="embedded-course-frame-wrap">
-        <iframe
-          class="embedded-course-frame"
-          src="embedded-course-export/index.html"
-          title="Eingebettete fertige Course Presentation"
-          loading="lazy">
-        </iframe>
+    <section class="embedded-course-demo" data-embedded-course-root aria-labelledby="embeddedCourseTitle">
+      <div class="embedded-course-demo-header">
+        <p class="eyebrow">Direkt integrierter Test</p>
+        <h2 id="embeddedCourseTitle">Fertige Course Presentation</h2>
+        <p class="section-intro">Diese exportierte Course Presentation ist direkt in diese Frontseite integriert. Sie läuft nicht in einem iframe und ist keine Verlinkung.</p>
+      </div>
+      <div class="embedded-course-live-shell">
+        <div data-embedded-course-viewer></div>
+        <div class="embedded-course-nav">
+          <button data-embedded-course-prev type="button">Zurück</button>
+          <span data-embedded-course-count></span>
+          <button data-embedded-course-next type="button">Weiter</button>
+        </div>
       </div>
     </section>
 
   </main>
+  <script src="embedded-course-data.js?v=59"></script>
+  <script src="embedded-course-live.js?v=59"></script>
+
 </body>
 </html>
