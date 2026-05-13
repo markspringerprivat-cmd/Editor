@@ -1,24 +1,17 @@
 (() => {
   'use strict';
 
-  const editorType = document.body.dataset.editor;
   const app = document.getElementById('app');
-  const VERSION = '56';
+  const editorType = document.body.dataset.editor;
+  const VERSION = '60';
 
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-  }[char]));
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const uid = () => 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const clone = (value) => JSON.parse(JSON.stringify(value));
-  const typeLabel = (type) => ({
-    text: 'Textbox', link: 'Link', image: 'Bild', video: 'Video', interactiveVideo: 'Interaktives Video',
-    choice: 'Single & Multiple Choice', dragWords: 'Drag the Words', dragDrop: 'Drag and Drop'
-  }[type] || type);
+  const clone = (x) => JSON.parse(JSON.stringify(x));
   const isYoutube = (url) => /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/i.test(url || '');
   const youtubeId = (url) => {
-    const text = String(url || '');
-    const match = text.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
-    return match ? match[1] : '';
+    const m = String(url || '').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
+    return m ? m[1] : '';
   };
   const ytEmbed = (url) => {
     const id = youtubeId(url);
@@ -36,1023 +29,418 @@
 
   function defaultStyle(type = 'text') {
     return {
-      x: 70,
-      y: 70,
-      width: type === 'interactiveVideo' || type === 'video' ? 620 : 360,
-      height: type === 'interactiveVideo' || type === 'video' ? 360 : 170,
+      x: 40,
+      y: 54,
+      width: type === 'video' || type === 'interactiveVideo' ? 620 : 380,
+      height: type === 'video' || type === 'interactiveVideo' ? 350 : 180,
       z: 1,
       showBorder: true,
       bgColor: '#ffffff',
-      bgTransparent: false
+      bgTransparent: type === 'text' ? true : false
     };
   }
 
   function defaultAction(type = 'choice') {
     return {
       id: uid(),
-      time: 4,
+      time: 0,
       type,
-      question: 'Welche Antwort passt?',
+      question: 'Neue Frage',
       description: 'Wähle eine Antwort aus.',
-      answers: ['Antwort 1', 'Antwort 2', 'Antwort 3'],
+      answers: ['Antwort 1', 'Antwort 2'],
       correct: [0],
-      dragText: 'Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].',
-      pairs: [
-        { item: 'Beispiel', target: 'Planung' },
-        { item: 'Struktur', target: 'Verständnis' }
-      ]
+      dragText: 'Text mit [Lücke].',
+      pairs: [{ item: 'Begriff', target: 'Zielbereich' }]
     };
   }
 
-  function defaultBlock(type = 'text', position = {}) {
-    const style = { ...defaultStyle(type), ...position };
-    const block = {
+  function defaultBlock(type = 'text') {
+    return {
       id: uid(),
       type,
-      label: typeLabel(type),
-      richText: type === 'text' ? '<p>Text eingeben …</p>' : '',
+      richText: type === 'text' ? 'Text eingeben …' : '',
       linkText: 'Link öffnen',
       url: 'https://example.com',
       media: '',
       alt: '',
       question: 'Welche Antwort passt?',
-      description: 'Wähle eine Antwort aus.',
-      answers: ['Antwort 1', 'Antwort 2', 'Antwort 3'],
+      description: 'Wähle die passende Antwort aus.',
+      answers: ['Antwort 1', 'Antwort 2'],
       correct: [0],
       dragText: 'Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].',
       pairs: [
         { item: 'Beispiel', target: 'Planung' },
         { item: 'Struktur', target: 'Verständnis' }
       ],
-      interactions: [defaultAction('choice')],
-      style
-    };
-    if (type === 'link') block.richText = '';
-    if (type === 'image') block.style.height = 260;
-    return block;
-  }
-
-  function defaultPage(number = 1, label = 'Folie') {
-    return { id: uid(), title: `${label} ${number}`, blocks: [] };
-  }
-
-  function normalizeAction(action = {}) {
-    const base = defaultAction(action.type || 'choice');
-    return {
-      ...base,
-      ...action,
-      id: action.id || uid(),
-      time: Number(action.time) || 0,
-      answers: Array.isArray(action.answers) && action.answers.length ? action.answers.map(String) : base.answers,
-      correct: Array.isArray(action.correct) ? action.correct.map(Number) : [Number(action.correctIndex) || 0],
-      pairs: Array.isArray(action.pairs) && action.pairs.length
-        ? action.pairs.map((pair) => ({ item: String(pair.item || ''), target: String(pair.target || '') })).filter((pair) => pair.item && pair.target)
-        : base.pairs
+      interactions: [],
+      style: defaultStyle(type)
     };
   }
 
   function normalizeBlock(block = {}) {
     const base = defaultBlock(block.type || 'text');
-    const normalized = { ...base, ...block };
-    normalized.style = { ...defaultStyle(normalized.type), ...(block.style || {}) };
-    if (typeof normalized.style.showBorder === 'undefined') normalized.style.showBorder = true;
-    if (!normalized.style.bgColor) normalized.style.bgColor = '#ffffff';
-    normalized.style.bgTransparent = normalized.style.bgTransparent === true;
-    normalized.answers = Array.isArray(block.answers) && block.answers.length ? block.answers.map(String) : base.answers;
-    normalized.correct = Array.isArray(block.correct) ? block.correct.map(Number) : [Number(block.correctIndex) || 0];
-    normalized.pairs = Array.isArray(block.pairs) && block.pairs.length
-      ? block.pairs.map((pair) => ({ item: String(pair.item || ''), target: String(pair.target || '') })).filter((pair) => pair.item && pair.target)
-      : base.pairs;
-    normalized.interactions = Array.isArray(block.interactions) ? block.interactions.map(normalizeAction) : [];
-    normalized.richText = String(normalized.richText || '');
-    return normalized;
+    const out = { ...base, ...block };
+    out.style = { ...defaultStyle(out.type), ...(block.style || {}) };
+    out.style.showBorder = out.style.showBorder !== false;
+    out.style.bgTransparent = out.style.bgTransparent === true;
+    out.answers = Array.isArray(out.answers) && out.answers.length ? out.answers.map(String) : base.answers;
+    out.correct = Array.isArray(out.correct) ? out.correct.map(Number) : [Number(out.correctIndex) || 0];
+    out.pairs = Array.isArray(out.pairs) && out.pairs.length ? out.pairs.map(p => ({ item: String(p.item || ''), target: String(p.target || '') })) : base.pairs;
+    out.interactions = Array.isArray(out.interactions) ? out.interactions.map(normalizeAction) : [];
+    return out;
   }
 
-  function createTextToolbar() {
-    return `
-      <div class="word-toolbar" aria-label="Textformatierung">
-        <div class="toolbar-group">
-          <select data-cmd="fontName" title="Schriftart">
-            <option value="Inter, system-ui, sans-serif">Aptos / Inter</option>
-            <option value="Arial, sans-serif">Arial</option>
-            <option value="Georgia, serif">Georgia</option>
-            <option value="Times New Roman, serif">Times</option>
-            <option value="Courier New, monospace">Courier</option>
-          </select>
-          <select data-font-px title="Schriftgröße">
-            <option value="12">12</option>
-            <option value="14">14</option>
-            <option value="16" selected>16</option>
-            <option value="18">18</option>
-            <option value="20">20</option>
-            <option value="24">24</option>
-            <option value="28">28</option>
-            <option value="32">32</option>
-          </select>
-        </div>
-        <div class="toolbar-group">
-          <button class="tb" type="button" data-cmd="bold"><b>F</b></button>
-          <button class="tb" type="button" data-cmd="italic"><i>K</i></button>
-          <button class="tb" type="button" data-cmd="underline"><u>U</u></button>
-          <button class="tb" type="button" data-cmd="insertUnorderedList">• Liste</button>
-        </div>
-        <div class="toolbar-group">
-          <button class="tb" type="button" data-cmd="justifyLeft">Links</button>
-          <button class="tb" type="button" data-cmd="justifyCenter">Mitte</button>
-          <button class="tb" type="button" data-cmd="justifyRight">Rechts</button>
-        </div>
-        <div class="toolbar-group">
-          <label>Schriftfarbe <input type="color" data-cmd="foreColor" value="#111827"></label>
-        </div>
-      </div>`;
+  function normalizeAction(a = {}) {
+    const base = defaultAction(a.type || 'choice');
+    const out = { ...base, ...a };
+    out.id = out.id || uid();
+    out.time = Number(out.time) || 0;
+    out.answers = Array.isArray(out.answers) && out.answers.length ? out.answers.map(String) : base.answers;
+    out.correct = Array.isArray(out.correct) ? out.correct.map(Number) : [Number(out.correctIndex) || 0];
+    out.pairs = Array.isArray(out.pairs) && out.pairs.length ? out.pairs.map(p => ({ item: String(p.item || ''), target: String(p.target || '') })) : base.pairs;
+    return out;
   }
 
-  let savedSelection = null;
-
-  function rememberSelection() {
-    const selection = window.getSelection?.();
-    if (!selection || !selection.rangeCount) return;
-    const node = selection.anchorNode;
-    const element = node?.nodeType === 1 ? node : node?.parentElement;
-    if (element?.closest?.('.rich-text')) savedSelection = selection.getRangeAt(0).cloneRange();
+  function defaultPage(n = 1, label = 'Folie') {
+    return { id: uid(), title: `${label} ${n}`, blocks: [] };
   }
 
-  document.addEventListener('selectionchange', rememberSelection);
-
-  function restoreSelection() {
-    if (!savedSelection) return;
-    const selection = window.getSelection?.();
-    if (!selection) return;
-    selection.removeAllRanges();
-    selection.addRange(savedSelection);
+  function toolbarHtml() {
+    return `<div class="format-toolbar">
+      <select data-cmd="fontName" title="Schriftart">
+        <option value="Inter, system-ui, sans-serif">Aptos / Inter</option><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Times New Roman, serif">Times</option><option value="Courier New, monospace">Courier</option>
+      </select>
+      <select data-font-size title="Schriftgröße"><option>12</option><option>14</option><option selected>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>32</option></select>
+      <button type="button" data-cmd="bold"><b>F</b></button><button type="button" data-cmd="italic"><i>K</i></button><button type="button" data-cmd="underline"><u>U</u></button>
+      <button type="button" data-cmd="insertUnorderedList">• Liste</button>
+      <button type="button" data-cmd="justifyLeft">Links</button><button type="button" data-cmd="justifyCenter">Mitte</button><button type="button" data-cmd="justifyRight">Rechts</button>
+      <label>Schriftfarbe <input type="color" data-cmd="foreColor" value="#111827"></label>
+    </div>`;
   }
 
-  function applyFontSizePx(px) {
-    restoreSelection();
-    document.execCommand('fontSize', false, '7');
-    document.querySelectorAll('font[size="7"]').forEach((font) => {
-      const span = document.createElement('span');
-      span.style.fontSize = `${px}px`;
-      span.innerHTML = font.innerHTML;
-      font.replaceWith(span);
-    });
-    rememberSelection();
+  let savedRange = null;
+  document.addEventListener('selectionchange', () => {
+    const s = window.getSelection?.();
+    if (!s || !s.rangeCount) return;
+    const node = s.anchorNode;
+    const el = node?.nodeType === 1 ? node : node?.parentElement;
+    if (el?.closest?.('.editable-text')) savedRange = s.getRangeAt(0).cloneRange();
+  });
+  function restoreRange() {
+    if (!savedRange) return;
+    const s = window.getSelection?.();
+    if (!s) return;
+    s.removeAllRanges(); s.addRange(savedRange);
   }
-
-  function bindTextToolbar(root = document) {
-    root.querySelectorAll('[data-cmd]').forEach((control) => {
+  function bindToolbar(root = document) {
+    root.querySelectorAll('[data-cmd]').forEach(control => {
       const run = () => {
-        restoreSelection();
+        restoreRange();
         document.execCommand(control.dataset.cmd, false, control.value || null);
-        rememberSelection();
       };
-      if (control.tagName === 'BUTTON') control.addEventListener('click', run);
-      else {
-        control.addEventListener('input', run);
-        control.addEventListener('change', run);
-      }
+      control.addEventListener(control.type === 'color' ? 'input' : 'click', run);
+      if (control.tagName === 'SELECT') control.addEventListener('change', run);
     });
-    root.querySelectorAll('[data-font-px]').forEach((control) => {
-      const run = () => applyFontSizePx(control.value);
-      control.addEventListener('input', run);
-      control.addEventListener('change', run);
-    });
+    root.querySelectorAll('[data-font-size]').forEach(sel => sel.addEventListener('change', () => {
+      restoreRange(); document.execCommand('fontSize', false, '7');
+      document.querySelectorAll('font[size="7"]').forEach(font => {
+        const span = document.createElement('span'); span.style.fontSize = `${sel.value}px`; span.innerHTML = font.innerHTML; font.replaceWith(span);
+      });
+    }));
   }
 
-  function renderMedia(media, className = 'preview-video') {
-    if (!media) return '<p class="hint">Noch keine Video-URL oder Datei ausgewählt.</p>';
-    if (isYoutube(media)) {
-      return `<iframe class="${className} youtube-frame" src="${esc(ytEmbed(media))}" title="YouTube-Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>`;
-    }
-    return `<video class="${className}" src="${esc(media)}" controls></video>`;
-  }
-
-  function blockStyle(block) {
-    const style = block.style || defaultStyle(block.type);
-    const bg = style.bgTransparent ? 'transparent' : (style.bgColor || '#ffffff');
-    return `left:${Number(style.x) || 0}px;top:${Number(style.y) || 0}px;width:${Number(style.width) || 300}px;height:${Number(style.height) || 140}px;z-index:${Number(style.z) || 1};background:${bg}`;
+  function mediaHtml(src, cls = 'media-video') {
+    if (!src) return '<div class="empty-media">Keine Video-/Medienquelle eingetragen.</div>';
+    if (isYoutube(src)) return `<iframe class="${cls} youtube-frame" src="${esc(ytEmbed(src))}" allowfullscreen title="YouTube"></iframe>`;
+    return `<video class="${cls}" src="${esc(src)}" controls></video>`;
   }
 
   function renderChoice(block) {
     const multi = (block.correct || []).length > 1;
-    return `
-      <div data-run="choice">
-        <h3>${esc(block.question)}</h3>
-        <p>${esc(block.description || '')}</p>
-        <div class="choice-stack">${(block.answers || []).map((answer, index) => `
-          <label class="choice-option"><input type="${multi ? 'checkbox' : 'radio'}" name="choice-${esc(block.id)}" value="${index}"> <span>${esc(answer)}</span></label>
-        `).join('')}</div>
-        <button class="btn primary check-choice control-gap" type="button">Prüfen</button>
-        <div class="feedback" hidden></div>
-      </div>`;
+    return `<div class="activity-preview" data-run="choice"><h3>${esc(block.question)}</h3><p>${esc(block.description)}</p><div class="choice-stack">${block.answers.map((a,i)=>`<label class="choice-option"><input type="${multi?'checkbox':'radio'}" name="c-${esc(block.id)}" value="${i}"> ${esc(a)}</label>`).join('')}</div><button class="btn primary check-choice" type="button">Prüfen</button><div class="feedback" hidden></div></div>`;
   }
-
   function renderDragWords(block) {
     const words = [];
-    const html = esc(block.dragText || '').replace(/\[([^\]]+)\]/g, (_, word) => {
-      words.push(word);
-      return `<span class="dtw-blank" data-answer="${esc(word)}"></span>`;
-    });
-    return `
-      <div data-run="dragWords">
-        <p class="dtw-text">${html}</p>
-        <div class="word-bank">${words.map((word) => `<button class="chip" type="button" draggable="true">${esc(word)}</button>`).join('')}</div>
-        <button class="btn primary check-dtw control-gap" type="button">Prüfen</button>
-        <div class="feedback" hidden></div>
-      </div>`;
+    const text = esc(block.dragText).replace(/\[([^\]]+)\]/g, (_, w) => { words.push(w); return `<span class="dtw-blank" data-answer="${esc(w)}"></span>`; });
+    return `<div class="activity-preview" data-run="dragWords"><p class="dtw-text">${text}</p><div class="word-bank">${words.map(w=>`<button class="chip" type="button" draggable="true">${esc(w)}</button>`).join('')}</div><button class="btn primary check-dtw" type="button">Prüfen</button><div class="feedback" hidden></div></div>`;
   }
-
   function renderDragDrop(block) {
-    const pairs = block.pairs || [];
-    const targets = [...new Set(pairs.map((pair) => pair.target))];
-    return `
-      <div data-run="dragDrop">
-        <p>${esc(block.description || 'Ziehe die Begriffe in die passenden Felder.')}</p>
-        <div class="dnd-bank">${pairs.map((pair) => `<button class="dnd-item" type="button" draggable="true" data-target="${esc(pair.target)}">${esc(pair.item)}</button>`).join('')}</div>
-        <div class="dnd-target-grid">${targets.map((target) => `<div class="dnd-target" data-target="${esc(target)}"><strong>${esc(target)}</strong></div>`).join('')}</div>
-        <button class="btn primary check-dnd control-gap" type="button">Prüfen</button>
-        <div class="feedback" hidden></div>
-      </div>`;
+    const targets = [...new Set((block.pairs || []).map(p => p.target).filter(Boolean))];
+    return `<div class="activity-preview" data-run="dragDrop"><p>${esc(block.description)}</p><div class="dnd-bank">${(block.pairs||[]).map(p=>`<button class="dnd-item" type="button" draggable="true" data-target="${esc(p.target)}">${esc(p.item)}</button>`).join('')}</div><div class="dnd-target-grid">${targets.map(t=>`<div class="dnd-target" data-target="${esc(t)}"><strong>${esc(t)}</strong></div>`).join('')}</div><button class="btn primary check-dnd" type="button">Prüfen</button><div class="feedback" hidden></div></div>`;
   }
-
   function renderInteractiveVideo(block) {
-    return `
-      <div data-run="interactiveVideo">
-        <div class="iv-stage" data-interactions="${esc(JSON.stringify(block.interactions || []))}">
-          ${renderMedia(block.media, 'preview-video')}
-          <div class="glass-overlay" hidden></div>
-        </div>
-        <p class="hint">${(block.interactions || []).length} Aktion(en). Zeitstopps funktionieren bei lokalen oder direkten Videodateien. YouTube wird eingebettet, aber nicht zuverlässig per Zeitmarke gesteuert.</p>
-      </div>`;
+    return `<div class="iv-stage" data-interactions="${esc(JSON.stringify(block.interactions || []))}">${mediaHtml(block.media, 'media-video')}<div class="glass-overlay" hidden></div></div>`;
   }
-
   function renderBlockContent(block, editable = true) {
-    block = normalizeBlock(block);
-    if (block.type === 'text') {
-      return `<div class="rich-text" contenteditable="${editable}" data-rich-for="${esc(block.id)}">${block.richText || '<p>Text eingeben …</p>'}</div>`;
-    }
-    if (block.type === 'link') {
-      return `<a class="link-box" href="${esc(block.url || '#')}" target="_blank" rel="noopener">${esc(block.linkText || 'Link öffnen')}</a>`;
-    }
-    if (block.type === 'image') {
-      return block.media ? `<img class="media" src="${esc(block.media)}" alt="${esc(block.alt || '')}">` : '<p class="hint">Bild-URL oder Bilddatei rechts einfügen.</p>';
-    }
-    if (block.type === 'video') return renderMedia(block.media, 'preview-video');
+    if (block.type === 'text') return `<div class="editable-text" contenteditable="${editable}" data-rich="${esc(block.id)}">${block.richText || 'Text eingeben …'}</div>`;
+    if (block.type === 'link') return `<a class="link-box" href="${esc(block.url)}" target="_blank">${esc(block.linkText || 'Link öffnen')}</a>`;
+    if (block.type === 'image') return block.media ? `<img class="media-img" src="${esc(block.media)}" alt="${esc(block.alt)}">` : '<div class="empty-media">Bild auswählen oder URL eintragen.</div>';
+    if (block.type === 'video') return mediaHtml(block.media, 'media-video');
     if (block.type === 'interactiveVideo') return renderInteractiveVideo(block);
     if (block.type === 'choice') return renderChoice(block);
     if (block.type === 'dragWords') return renderDragWords(block);
     if (block.type === 'dragDrop') return renderDragDrop(block);
-    return `<p>${esc(block.label || typeLabel(block.type))}</p>`;
+    return '';
   }
 
-  function attachRunHandlers(root = document, getData = () => null) {
+  function attachRunHandlers(root = document, getBlock = () => null) {
     let dragged = null;
-    root.querySelectorAll('.chip,.dnd-item').forEach((item) => {
-      item.addEventListener('dragstart', () => { dragged = item; });
-      item.addEventListener('click', () => { dragged = item; });
+    root.querySelectorAll('.chip,.dnd-item').forEach(el => { el.ondragstart = () => dragged = el; el.onclick = () => { dragged = el; }; });
+    root.querySelectorAll('.dtw-blank').forEach(blank => {
+      const place = () => { if (dragged?.classList.contains('chip')) { blank.textContent = dragged.textContent; blank.dataset.filled = dragged.textContent; dragged.remove(); dragged = null; } };
+      blank.ondragover = e => e.preventDefault(); blank.ondrop = place; blank.onclick = place;
     });
-    root.querySelectorAll('.dtw-blank').forEach((blank) => {
-      const place = () => {
-        if (!dragged || !dragged.classList.contains('chip')) return;
-        blank.textContent = dragged.textContent;
-        blank.dataset.filled = dragged.textContent;
-        dragged.remove();
-        dragged = null;
-      };
-      blank.addEventListener('dragover', (event) => event.preventDefault());
-      blank.addEventListener('drop', place);
-      blank.addEventListener('click', place);
+    root.querySelectorAll('.dnd-target').forEach(zone => {
+      const place = () => { if (dragged?.classList.contains('dnd-item')) { zone.appendChild(dragged); dragged = null; } };
+      zone.ondragover = e => e.preventDefault(); zone.ondrop = place; zone.onclick = place;
     });
-    root.querySelectorAll('.dnd-target').forEach((zone) => {
-      const place = () => {
-        if (!dragged || !dragged.classList.contains('dnd-item')) return;
-        zone.appendChild(dragged);
-        dragged = null;
-      };
-      zone.addEventListener('dragover', (event) => event.preventDefault());
-      zone.addEventListener('drop', place);
-      zone.addEventListener('click', place);
+    root.querySelectorAll('.check-choice').forEach(btn => btn.onclick = () => {
+      const card = btn.closest('[data-run="choice"]'); const host = btn.closest('[data-block-id]'); const b = getBlock(host?.dataset.blockId) || window.__singleBlock || {};
+      const correct = (b.correct || [0]).map(Number).sort((a,b)=>a-b); const chosen = [...card.querySelectorAll('input:checked')].map(i=>Number(i.value)).sort((a,b)=>a-b);
+      const ok = chosen.length === correct.length && chosen.every((v,i)=>v===correct[i]);
+      card.querySelectorAll('.choice-option').forEach((o,i)=>{ o.classList.toggle('is-correct', correct.includes(i)); o.classList.toggle('is-wrong', chosen.includes(i)&&!correct.includes(i)); });
+      const f = card.querySelector('.feedback'); f.hidden = false; f.textContent = ok ? 'Richtig.' : 'Nicht ganz. Die richtige Antwort ist markiert.';
     });
-    root.querySelectorAll('.check-choice').forEach((button) => {
-      button.onclick = () => {
-        const host = button.closest('[data-block-id], .single-preview, .iv-action-card');
-        const block = getData(host?.dataset?.blockId) || window.__singleData || {};
-        const correct = (block.correct || [0]).map(Number).sort((a, b) => a - b);
-        const card = button.closest('[data-run="choice"]');
-        const selected = [...card.querySelectorAll('input:checked')].map((input) => Number(input.value)).sort((a, b) => a - b);
-        const ok = selected.length === correct.length && selected.every((value, index) => value === correct[index]);
-        card.querySelectorAll('.choice-option').forEach((option, index) => {
-          option.classList.toggle('is-correct', correct.includes(index));
-          option.classList.toggle('is-wrong', selected.includes(index) && !correct.includes(index));
-        });
-        const feedback = card.querySelector('.feedback');
-        if (feedback) {
-          feedback.hidden = false;
-          feedback.textContent = ok ? 'Richtig.' : 'Nicht ganz. Die richtige Antwort ist markiert.';
-        }
-      };
+    root.querySelectorAll('.check-dtw').forEach(btn => btn.onclick = () => {
+      const card = btn.closest('[data-run="dragWords"]'); const blanks = [...card.querySelectorAll('.dtw-blank')];
+      const ok = blanks.length && blanks.every(b => b.dataset.filled === b.dataset.answer); blanks.forEach(b => b.classList.toggle('is-correct', b.dataset.filled === b.dataset.answer));
+      const f = card.querySelector('.feedback'); f.hidden = false; f.textContent = ok ? 'Alles richtig.' : 'Noch nicht alles richtig.';
     });
-    root.querySelectorAll('.check-dtw').forEach((button) => {
-      button.onclick = () => {
-        const card = button.closest('[data-run="dragWords"]');
-        const blanks = [...card.querySelectorAll('.dtw-blank')];
-        const ok = blanks.length && blanks.every((blank) => blank.dataset.filled === blank.dataset.answer);
-        blanks.forEach((blank) => blank.classList.toggle('is-correct', blank.dataset.filled === blank.dataset.answer));
-        const feedback = card.querySelector('.feedback');
-        if (feedback) {
-          feedback.hidden = false;
-          feedback.textContent = ok ? 'Alles richtig.' : 'Noch nicht alles richtig.';
-        }
-      };
+    root.querySelectorAll('.check-dnd').forEach(btn => btn.onclick = () => {
+      const card = btn.closest('[data-run="dragDrop"]'); const items = [...card.querySelectorAll('.dnd-target .dnd-item')]; const all = card.querySelectorAll('.dnd-item').length;
+      const ok = items.length === all && items.every(i => i.dataset.target === i.parentElement.dataset.target); items.forEach(i => i.classList.toggle('is-correct', i.dataset.target === i.parentElement.dataset.target));
+      const f = card.querySelector('.feedback'); f.hidden = false; f.textContent = ok ? 'Alles richtig.' : 'Einige Zuordnungen stimmen noch nicht.';
     });
-    root.querySelectorAll('.check-dnd').forEach((button) => {
-      button.onclick = () => {
-        const card = button.closest('[data-run="dragDrop"]');
-        const items = [...card.querySelectorAll('.dnd-target .dnd-item')];
-        const all = card.querySelectorAll('.dnd-item').length;
-        const ok = items.length === all && items.every((item) => item.dataset.target === item.parentElement.dataset.target);
-        items.forEach((item) => item.classList.toggle('is-correct', item.dataset.target === item.parentElement.dataset.target));
-        const feedback = card.querySelector('.feedback');
-        if (feedback) {
-          feedback.hidden = false;
-          feedback.textContent = ok ? 'Alles richtig.' : 'Einige Zuordnungen stimmen noch nicht.';
-        }
-      };
-    });
-    attachInteractiveVideoRuntime(root);
+    attachInteractiveRuntime(root);
   }
-
-  function renderOverlayAction(action) {
-    action = normalizeAction(action);
-    if (action.type === 'dragWords') return renderDragWords(action);
-    if (action.type === 'dragDrop') return renderDragDrop(action);
-    return renderChoice(action);
+  function renderAction(action) {
+    const a = normalizeAction(action);
+    const fake = normalizeBlock({ ...a, id: a.id, type: a.type === 'choice' ? 'choice' : a.type });
+    if (a.type === 'dragWords') return renderDragWords(fake);
+    if (a.type === 'dragDrop') return renderDragDrop(fake);
+    return renderChoice(fake);
   }
-
-  function attachInteractiveVideoRuntime(root = document) {
-    root.querySelectorAll('.iv-stage').forEach((stage) => {
-      const video = stage.querySelector('video');
-      const overlay = stage.querySelector('.glass-overlay');
-      if (!video || !overlay) return;
-      let actions = [];
-      try { actions = JSON.parse(stage.dataset.interactions || '[]').map((item) => ({ ...normalizeAction(item), done: false })); } catch {}
+  function attachInteractiveRuntime(root = document) {
+    root.querySelectorAll('.iv-stage').forEach(stage => {
+      const video = stage.querySelector('video'); const overlay = stage.querySelector('.glass-overlay'); if (!video || !overlay) return;
+      let actions = []; try { actions = JSON.parse(stage.dataset.interactions || '[]').map(a => ({ ...normalizeAction(a), done: false })); } catch {}
       video.ontimeupdate = () => {
-        const action = actions.find((item) => !item.done && video.currentTime >= Number(item.time));
-        if (!action) return;
-        action.done = true;
-        video.pause();
-        overlay.hidden = false;
-        overlay.innerHTML = `<div class="iv-action-card"><h3>${esc(action.question)}</h3><p>${esc(action.description || '')}</p>${renderOverlayAction(action)}<button class="btn primary continue-video" type="button">Weiter</button></div>`;
-        overlay.querySelector('.continue-video').onclick = () => {
-          overlay.hidden = true;
-          video.play().catch(() => {});
-        };
+        const action = actions.find(a => !a.done && video.currentTime >= Number(a.time)); if (!action) return;
+        action.done = true; video.pause(); overlay.hidden = false;
+        overlay.innerHTML = `<div class="iv-card"><h3>${esc(action.question)}</h3><p>${esc(action.description)}</p>${renderAction(action)}<button class="btn primary continue-video" type="button">Weiter</button></div>`;
+        overlay.querySelector('.continue-video').onclick = () => { overlay.hidden = true; video.play().catch(()=>{}); };
         attachRunHandlers(overlay, () => action);
       };
     });
   }
 
+  function blockStyle(block) {
+    const s = block.style || defaultStyle(block.type);
+    const bg = s.bgTransparent ? 'transparent' : (s.bgColor || '#ffffff');
+    return `left:${Number(s.x)||0}px;top:${Number(s.y)||0}px;width:${Number(s.width)||300}px;height:${Number(s.height)||160}px;z-index:${Number(s.z)||1};background:${bg};border-color:${s.showBorder === false ? 'transparent' : 'rgba(47,95,143,.40)'}`;
+  }
 
   function renderPairsEditor(pairs = [], prefix = 'pair') {
-    const safePairs = Array.isArray(pairs) && pairs.length ? pairs : [{ item: '', target: '' }];
-    return `
-      <div class="pair-editor" data-pair-editor="${esc(prefix)}">
-        <div class="pair-editor-head"><span>Begriff</span><span>Zielbereich</span><span></span></div>
-        ${safePairs.map((pair, index) => `
-          <div class="pair-row">
-            <input data-${prefix}-item="${index}" value="${esc(pair.item || '')}" placeholder="Begriff / Beispiel">
-            <input data-${prefix}-target="${index}" value="${esc(pair.target || '')}" placeholder="Zielbereich">
-            <button class="btn small" type="button" data-${prefix}-remove="${index}" aria-label="Paar entfernen">×</button>
-          </div>`).join('')}
-        <button class="btn small" type="button" data-${prefix}-add>Weiteres Paar hinzufügen</button>
-      </div>`;
+    const list = Array.isArray(pairs) && pairs.length ? pairs : [{ item: '', target: '' }];
+    return `<div class="pair-editor"><div class="pair-head"><span>Begriff / Beispiel</span><span>Zielbereich</span><span></span></div>${list.map((p,i)=>`<div class="pair-row"><input data-${prefix}-item="${i}" value="${esc(p.item)}" placeholder="Begriff"><input data-${prefix}-target="${i}" value="${esc(p.target)}" placeholder="Zielbereich"><button class="btn small" type="button" data-${prefix}-remove="${i}">×</button></div>`).join('')}<button class="btn small" type="button" data-${prefix}-add>Weiteres Paar hinzufügen</button></div>`;
+  }
+
+  function propertiesHtml(block, compact = false) {
+    if (!block) return '<div class="properties-strip muted">Wähle ein Element aus.</div>';
+    let content = '';
+    if (block.type === 'text') content = `<label>Text <textarea data-prop="richText" rows="2">${esc(String(block.richText || '').replace(/<[^>]+>/g,''))}</textarea></label>`;
+    if (block.type === 'link') content = `<label>Linktext <input data-prop="linkText" value="${esc(block.linkText)}"></label><label>URL <input data-prop="url" value="${esc(block.url)}"></label>`;
+    if (block.type === 'image') content = `<label>Bild-URL <input data-prop="media" value="${esc(block.media)}"></label><label>Bilddatei <input type="file" accept="image/*" data-file="media"></label>`;
+    if (block.type === 'video' || block.type === 'interactiveVideo') content = `<label>Video-URL <input data-prop="media" value="${esc(block.media)}" placeholder="YouTube-Link oder direkte Videodatei"></label><label>Videodatei <input type="file" accept="video/*" data-file="media"></label>`;
+    if (block.type === 'choice') content = `<label>Frage <input data-prop="question" value="${esc(block.question)}"></label><label>Beschreibung <input data-prop="description" value="${esc(block.description)}"></label><label>Antworten <textarea data-prop-list="answers" rows="3">${esc(block.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en), z. B. 0 oder 0,2 <input data-prop-correct value="${esc((block.correct||[0]).join(','))}"></label>`;
+    if (block.type === 'dragWords') content = `<label>Text mit Lücken <textarea data-prop="dragText" rows="3">${esc(block.dragText)}</textarea></label>`;
+    if (block.type === 'dragDrop') content = `<label>Aufgabentext <input data-prop="description" value="${esc(block.description)}"></label>${renderPairsEditor(block.pairs, 'blockpair')}`;
+    if (block.type === 'interactiveVideo') content += `<label>Interaktionen <textarea data-prop-actions rows="3" placeholder="0 | choice | Frage | Antwort 1;Antwort 2 | 0">${esc(block.interactions.map(a=>`${a.time} | ${a.type} | ${a.question} | ${a.answers.join(';')} | ${(a.correct||[0]).join(',')}`).join('\n'))}</textarea></label>`;
+    return `<div class="properties-strip"><div class="prop-title">Element bearbeiten</div>${content}<label class="checkline"><input type="checkbox" data-style="bgTransparent" ${block.style.bgTransparent ? 'checked' : ''}> Hintergrund transparent</label><label>Hintergrundfarbe <input type="color" data-style="bgColor" value="${esc(block.style.bgColor || '#ffffff')}"></label><label class="checkline"><input type="checkbox" data-style="showBorder" ${block.style.showBorder !== false ? 'checked' : ''}> Rahmen anzeigen</label><div class="layer-buttons"><button type="button" data-layer="back">Ebene zurück</button><button type="button" data-layer="front">Ebene vor</button><button type="button" data-layer="bottom">Ganz nach hinten</button><button type="button" data-layer="top">Ganz nach vorne</button><button class="danger" type="button" data-delete>Element löschen</button></div></div>`;
   }
 
   function initContainer(kind) {
     const label = kind === 'book' ? 'Seite' : 'Folie';
-    const storeKey = `lite-${kind}-v${VERSION}`;
-    let state = {
-      title: kind === 'book' ? 'Interactive Book' : 'Course Presentation',
-      stageWidth: kind === 'book' ? 1180 : 1280,
-      stageHeight: kind === 'book' ? 760 : 720,
-      pages: [defaultPage(1, label)],
-      activePage: 0,
-      selectedId: null
-    };
-    try {
-      const saved = localStorage.getItem(storeKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        state = { ...state, ...parsed };
-      }
-    } catch {}
-    state.pages = (state.pages || []).map((page, index) => ({
-      ...defaultPage(index + 1, label),
-      ...page,
-      blocks: Array.isArray(page.blocks) ? page.blocks.map(normalizeBlock) : []
-    }));
-    if (!state.pages.length) state.pages = [defaultPage(1, label)];
-
+    const storeKey = `mark-${kind}-${VERSION}`;
+    let state = { title: kind === 'book' ? 'Interactive Book' : 'Course Presentation', stageWidth: 1360, stageHeight: kind === 'book' ? 760 : 720, pages: [defaultPage(1,label)], activePage: 0, selectedId: null };
+    try { const saved = localStorage.getItem(storeKey); if (saved) state = { ...state, ...JSON.parse(saved) }; } catch {}
+    state.pages = (state.pages || []).map((p,i)=>({ ...defaultPage(i+1,label), ...p, blocks: Array.isArray(p.blocks) ? p.blocks.map(normalizeBlock) : [] }));
     const current = () => state.pages[state.activePage];
-    const findBlock = (id) => current()?.blocks.find((block) => block.id === id) || null;
-    const selected = () => findBlock(state.selectedId);
+    const block = (id) => current().blocks.find(b => b.id === id);
+    const selected = () => block(state.selectedId);
     const save = () => localStorage.setItem(storeKey, JSON.stringify(state));
-
-    function addBlock(type) {
-      const offset = (current().blocks.length % 5) * 28;
-      const block = defaultBlock(type, { x: 70 + offset, y: 90 + offset });
-      current().blocks.push(block);
-      state.selectedId = block.id;
-      save();
-      render();
-    }
-
-    function setActivePage(index) {
-      state.activePage = Math.max(0, Math.min(state.pages.length - 1, index));
-      state.selectedId = null;
-      save();
-      render();
-    }
-
-    function insertBar() {
-      return `
-        <div class="insert-bar clean-insert-bar">
-          <span class="insert-label">Einfügen</span>
-          <button type="button" data-add="text">Textbox</button>
-          <button type="button" data-add="link">Link</button>
-          <button type="button" data-add="image">Bild</button>
-          <button type="button" data-add="video">Video</button>
-          <button type="button" data-add="interactiveVideo">Interaktives Video</button>
-          <button type="button" data-add="choice">Choice</button>
-          <button type="button" data-add="dragWords">Drag the Words</button>
-          <button type="button" data-add="dragDrop">Drag and Drop</button>
-          <span class="insert-spacer"></span>
-          <label>Breite <input id="stageW" type="number" min="700" value="${Number(state.stageWidth) || 1280}"></label>
-          <label>Höhe <input id="stageH" type="number" min="420" value="${Number(state.stageHeight) || 720}"></label>
-          <button id="exportZip" class="primary" type="button">HTML-ZIP herunterladen</button>
-        </div>`;
-    }
-
-    function progress() {
-      const total = Math.max(1, state.pages.length);
-      const percent = ((state.activePage + 1) / total) * 100;
-      return `
-        <div class="slide-progress" aria-label="Fortschritt">
-          <div class="slide-progress-bar" style="width:${percent}%"></div>
-        </div>
-        <p class="slide-count">${label} ${state.activePage + 1} von ${total}</p>`;
-    }
+    const maxZ = () => Math.max(1, ...current().blocks.map(b => Number(b.style.z)||1));
 
     function render() {
-      const page = current();
-      const modeClass = kind === 'book' ? 'book-editor-mode' : 'presentation-editor-mode';
-      app.innerHTML = `
-        <section class="container-editor ${modeClass}">
-          ${insertBar()}
-          ${createTextToolbar()}
-          <div class="container-grid ${kind === 'book' ? 'book-container-grid' : ''}">
-            <aside class="pages-panel ${kind === 'book' ? 'book-tabs' : ''}">
-              <h2>${kind === 'book' ? 'Buchseiten' : 'Folien'}</h2>
-              <div class="page-list">
-                ${state.pages.map((item, index) => `<button class="page-tab ${index === state.activePage ? 'is-active' : ''}" type="button" data-page="${index}"><span>${esc(item.title || `${label} ${index + 1}`)}</span></button>`).join('')}
-              </div>
-              <button id="addPage" class="btn" type="button">${label} hinzufügen</button>
-            </aside>
-            <main class="stage-column">
-              <input class="title-input" id="pageTitle" value="${esc(page.title)}" aria-label="${label}titel">
-              <div class="stage-frame ${kind === 'book' ? 'book-frame' : 'presentation-frame'}">
-                <div class="stage-progress-inside">${progress()}</div>
-                <button class="stage-arrow stage-arrow-left" id="prevPage" type="button" aria-label="Vorherige ${label}" ${state.activePage === 0 ? 'disabled' : ''}>‹</button>
-                <div class="stage" id="stage" style="width:${Number(state.stageWidth) || 1280}px;height:${Number(state.stageHeight) || 720}px;">
-                  ${page.blocks.map((block) => `<article class="free-block ${state.selectedId === block.id ? 'is-selected' : ''} ${(block.style?.showBorder === false) ? 'no-frame' : ''}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="drag-handle" title="Zum Verschieben ziehen" aria-label="Element verschieben"></div><div class="free-content">${renderBlockContent(block, true)}</div></article>`).join('')}
-                </div>
-                <button class="stage-arrow stage-arrow-right" id="nextPage" type="button" aria-label="Nächste ${label}" ${state.activePage === state.pages.length - 1 ? 'disabled' : ''}>›</button>
-              </div>
-            </main>
-            <aside class="property-panel edge-panel"><h2>Element bearbeiten</h2><div id="props">${renderProps(selected())}</div></aside>
+      const page = current(); const pct = ((state.activePage + 1) / state.pages.length) * 100;
+      app.innerHTML = `<section class="editor-top"><p class="eyebrow">Containerfunktion</p><h1>${esc(state.title)}</h1></section>
+        <div class="insert-toolbar"><button data-add="text">Textbox</button><button data-add="link">Link</button><button data-add="image">Bild</button><button data-add="video">Video</button><button data-add="interactiveVideo">Interaktives Video</button><button data-add="choice">Choice</button><button data-add="dragWords">Drag the Words</button><button data-add="dragDrop">Drag and Drop</button></div>
+        ${toolbarHtml()}
+        <div id="propertiesHost">${propertiesHtml(selected())}</div>
+        <section class="container-work ${kind === 'book' ? 'book-work' : ''}">
+          <aside class="page-tabs"><h2>${label}n</h2>${state.pages.map((p,i)=>`<button class="${i===state.activePage?'active':''}" data-page="${i}">${esc(p.title)}</button>`).join('')}<button data-new-page>+ ${label}</button></aside>
+          <div class="stage-shell" style="width:${state.stageWidth}px">
+            <div class="stage-title"><input id="pageTitle" value="${esc(page.title)}"><span>${label} ${state.activePage+1} von ${state.pages.length}</span></div>
+            <div class="stage-frame" style="width:${state.stageWidth}px;height:${state.stageHeight}px" data-stage>
+              <div class="progress-inside"><span style="width:${pct}%"></span></div>
+              ${kind === 'course' ? `<button class="slide-arrow left" data-prev-page>‹</button><button class="slide-arrow right" data-next-page>›</button>` : ''}
+              ${page.blocks.map(b=>`<article class="free-block ${b.id===state.selectedId?'active':''}" data-block-id="${esc(b.id)}" style="${blockStyle(b)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(b, b.id===state.selectedId)}</div></article>`).join('')}
+            </div>
           </div>
-        </section>`;
-      bindEvents();
-      bindTextToolbar(app);
-      attachRunHandlers(app, findBlock);
+        </section>
+        <div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button><button class="btn" id="clearLocal">Lokale Speicherung löschen</button></div>`;
+      bindToolbar(app); bindContainerEvents(); attachRunHandlers(app, block); save();
     }
 
-    function renderProps(block) {
-      if (!block) return `<p class="hint">Wähle ein Element auf der ${label.toLowerCase()} aus.</p>`;
-      const style = block.style || defaultStyle(block.type);
-      return `
-        <div class="props-section compact-actions">
-          <label class="inline-check"><input id="toggleFrame" type="checkbox" ${style.showBorder === false ? '' : 'checked'}> Rahmen anzeigen</label>
-          <label class="inline-check"><input id="bgTransparent" type="checkbox" ${style.bgTransparent ? 'checked' : ''}> Hintergrund transparent</label>
-          <label>Hintergrundfarbe <input id="bgColor" type="color" value="${esc(style.bgColor || '#ffffff')}"></label>
-          <div class="layer-actions">
-            <button id="layerBack" class="btn small" type="button">Eine Ebene nach hinten</button>
-            <button id="layerForward" class="btn small" type="button">Eine Ebene nach vorne</button>
-            <button id="layerBottom" class="btn small" type="button">Ganz nach hinten</button>
-            <button id="layerTop" class="btn small" type="button">Ganz nach vorne</button>
-          </div>
-        </div>
-        ${typeProps(block)}
-        <button id="deleteBlock" class="btn danger" type="button">Element löschen</button>`;
+    function addBlock(type) {
+      const b = defaultBlock(type); b.style.x = 70 + current().blocks.length * 24; b.style.y = 80 + current().blocks.length * 24; b.style.z = maxZ() + 1; current().blocks.push(b); state.selectedId = b.id; render();
     }
-
-    function typeProps(block) {
-      if (block.type === 'link') {
-        return `<label>Linktext <input data-field="linkText" value="${esc(block.linkText || '')}"></label><label>URL <input data-field="url" value="${esc(block.url || '')}"></label>`;
-      }
-      if (block.type === 'image') {
-        return `<label>Bild-URL <input data-field="media" value="${esc(block.media || '')}"></label><label>Bilddatei auswählen <input data-file="media" type="file" accept="image/*"></label><label>Alternativtext <input data-field="alt" value="${esc(block.alt || '')}"></label>`;
-      }
-      if (block.type === 'video' || block.type === 'interactiveVideo') {
-        return `<label>Video-URL oder YouTube-Link <input data-field="media" value="${esc(block.media || '')}"></label><label>Videodatei auswählen <input data-file="media" type="file" accept="video/*"></label>${block.type === 'interactiveVideo' ? actionProps(block) : ''}`;
-      }
-      if (block.type === 'choice') {
-        return choiceProps(block);
-      }
-      if (block.type === 'dragWords') {
-        return `<label>Text mit [Lücken] <textarea data-field="dragText">${esc(block.dragText || '')}</textarea></label>`;
-      }
-      if (block.type === 'dragDrop') {
-        return `<label>Paare</label>${renderPairsEditor(block.pairs || [], 'pair')}`;
-      }
-      return `<p class="hint">Text wird direkt in der Box bearbeitet. Markiere Text und nutze die Leiste oben.</p>`;
+    function bindContainerEvents() {
+      app.querySelectorAll('[data-add]').forEach(btn => btn.onclick = () => addBlock(btn.dataset.add));
+      app.querySelectorAll('[data-page]').forEach(btn => btn.onclick = () => { state.activePage = Number(btn.dataset.page); state.selectedId = null; render(); });
+      app.querySelector('[data-new-page]')?.addEventListener('click', () => { state.pages.push(defaultPage(state.pages.length+1,label)); state.activePage = state.pages.length-1; state.selectedId = null; render(); });
+      app.querySelector('[data-prev-page]')?.addEventListener('click', () => { state.activePage = Math.max(0, state.activePage-1); state.selectedId=null; render(); });
+      app.querySelector('[data-next-page]')?.addEventListener('click', () => { state.activePage = Math.min(state.pages.length-1, state.activePage+1); state.selectedId=null; render(); });
+      app.querySelector('#pageTitle')?.addEventListener('input', e => { current().title = e.target.value; save(); });
+      const frame = app.querySelector('[data-stage]');
+      frame?.addEventListener('mousedown', e => { if (e.target === frame) { state.selectedId = null; render(); } });
+      app.querySelectorAll('.free-block').forEach(el => bindFreeBlock(el));
+      bindProperties();
+      app.querySelector('#exportZip').onclick = () => downloadActivityZip(state, `${kind}-export`);
+      app.querySelector('#clearLocal').onclick = () => { localStorage.removeItem(storeKey); location.reload(); };
     }
-
-    function choiceProps(block) {
-      return `
-        <label>Frage <input data-field="question" value="${esc(block.question || '')}"></label>
-        <label>Beschreibung <textarea data-field="description">${esc(block.description || '')}</textarea></label>
-        <label>Antworten, je eine Zeile <textarea data-list="answers">${esc((block.answers || []).join('\n'))}</textarea></label>
-        <label>Richtige Antwort(en), Nummern ab 0 <input data-correct value="${esc((block.correct || [0]).join(','))}"></label>`;
+    function bindFreeBlock(el) {
+      const b = block(el.dataset.blockId); if (!b) return;
+      el.addEventListener('mousedown', e => { if (state.selectedId !== b.id) { state.selectedId = b.id; render(); } });
+      const rich = el.querySelector('.editable-text');
+      if (rich) rich.addEventListener('input', () => { b.richText = rich.innerHTML; save(); });
+      const ro = new ResizeObserver(() => { if (state.selectedId === b.id) { b.style.width = Math.round(el.offsetWidth); b.style.height = Math.round(el.offsetHeight); save(); } }); ro.observe(el);
+      const handle = el.querySelector('.move-handle'); let start = null;
+      handle?.addEventListener('mousedown', e => { e.preventDefault(); start = { x:e.clientX, y:e.clientY, left:b.style.x, top:b.style.y }; document.body.classList.add('dragging'); });
+      document.addEventListener('mousemove', e => { if (!start) return; b.style.x = Math.max(0, start.left + e.clientX - start.x); b.style.y = Math.max(24, start.top + e.clientY - start.y); el.style.left = b.style.x+'px'; el.style.top = b.style.y+'px'; });
+      document.addEventListener('mouseup', () => { if (start) { start=null; document.body.classList.remove('dragging'); save(); } });
     }
-
-    function actionProps(block) {
-      const rows = (block.interactions || []).map((action, index) => `<button type="button" class="action-pill ${index === 0 ? 'is-active' : ''}" data-action-select="${index}">${Number(action.time).toFixed(1)}s · ${esc(typeLabel(action.type))}</button>`).join('');
-      return `
-        <div class="props-section">
-          <h3>Videoaktionen</h3>
-          <div class="action-pill-list">${rows || '<p class="hint">Noch keine Aktion.</p>'}</div>
-          <button class="btn small" type="button" data-add-inner-action="choice">Choice-Aktion hinzufügen</button>
-        </div>`;
+    function bindProperties() {
+      const b = selected(); if (!b) return;
+      app.querySelectorAll('[data-prop]').forEach(input => input.addEventListener('input', () => { b[input.dataset.prop] = input.value; updateSelectedDom(b); save(); }));
+      app.querySelectorAll('[data-prop-list]').forEach(input => input.addEventListener('input', () => { b[input.dataset.propList] = input.value.split('\n').filter(Boolean); updateSelectedDom(b); save(); }));
+      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { b.correct = e.target.value.split(',').map(x=>Number(x.trim())).filter(Number.isFinite); save(); });
+      app.querySelectorAll('[data-style]').forEach(input => input.addEventListener('input', () => { const k = input.dataset.style; b.style[k] = input.type === 'checkbox' ? input.checked : input.value; updateSelectedDom(b); save(); }));
+      app.querySelectorAll('[data-file]').forEach(input => input.addEventListener('change', async () => { if (input.files?.[0]) { b[input.dataset.file] = await dataUrlFromFile(input.files[0]); updateSelectedDom(b); save(); } }));
+      app.querySelector('[data-delete]')?.addEventListener('click', () => { current().blocks = current().blocks.filter(x=>x.id!==b.id); state.selectedId=null; render(); });
+      app.querySelectorAll('[data-layer]').forEach(btn => btn.addEventListener('click', () => { const z = maxZ(); if (btn.dataset.layer==='front') b.style.z += 1; if (btn.dataset.layer==='back') b.style.z = Math.max(1, b.style.z-1); if (btn.dataset.layer==='top') b.style.z = z+1; if (btn.dataset.layer==='bottom') b.style.z = 1; render(); }));
+      bindPairs('blockpair', b);
     }
-
-    async function bindFieldFile(input) {
-      const block = selected();
-      if (!block || !input.files?.[0]) return;
-      block[input.dataset.file] = await dataUrlFromFile(input.files[0]);
-      save();
-      render();
+    function updateSelectedDom(b) {
+      const el = app.querySelector(`[data-block-id="${CSS.escape(b.id)}"]`); if (!el) return;
+      el.setAttribute('style', blockStyle(b));
+      if (document.activeElement?.closest?.('#propertiesHost')) el.querySelector('.block-inner').innerHTML = renderBlockContent(b, false);
+      attachRunHandlers(el, block);
     }
-
-    function updateSelectedClass() {
-      app.querySelectorAll('.free-block').forEach((element) => element.classList.toggle('is-selected', element.dataset.blockId === state.selectedId));
-      const props = app.querySelector('#props');
-      if (props) props.innerHTML = renderProps(selected());
-      bindPropsOnly();
+    function bindPairs(prefix, target) {
+      app.querySelector(`[data-${prefix}-add]`)?.addEventListener('click', () => { target.pairs.push({item:'', target:''}); render(); });
+      app.querySelectorAll(`[data-${prefix}-remove]`).forEach(btn => btn.onclick = () => { target.pairs.splice(Number(btn.dataset[`${prefix}Remove`]),1); render(); });
+      app.querySelectorAll(`[data-${prefix}-item]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Item`])].item = input.value; save(); });
+      app.querySelectorAll(`[data-${prefix}-target]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Target`])].target = input.value; save(); });
     }
-
-    function bindPropsOnly() {
-      app.querySelectorAll('[data-style]').forEach((input) => {
-        input.oninput = () => {
-          const block = selected();
-          if (!block) return;
-          block.style[input.dataset.style] = Number(input.value) || 0;
-          const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-          if (element) {
-            if (input.dataset.style === 'x') element.style.left = `${block.style.x}px`;
-            if (input.dataset.style === 'y') element.style.top = `${block.style.y}px`;
-            if (input.dataset.style === 'width') element.style.width = `${block.style.width}px`;
-            if (input.dataset.style === 'height') element.style.height = `${block.style.height}px`;
-          }
-          save();
-        };
-      });
-      app.querySelectorAll('[data-field]').forEach((input) => {
-        input.oninput = () => {
-          const block = selected();
-          if (!block) return;
-          block[input.dataset.field] = input.value;
-          save();
-          const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"] .free-content`);
-          if (element && ['linkText', 'url', 'media', 'question', 'description'].includes(input.dataset.field)) element.innerHTML = renderBlockContent(block, true);
-          attachRunHandlers(app, findBlock);
-        };
-      });
-      app.querySelectorAll('[data-list]').forEach((input) => {
-        input.oninput = () => {
-          const block = selected();
-          if (!block) return;
-          block[input.dataset.list] = input.value.split('\n').map((item) => item.trim()).filter(Boolean);
-          save();
-        };
-      });
-      app.querySelector('[data-correct]')?.addEventListener('input', (event) => {
-        const block = selected();
-        if (!block) return;
-        block.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite);
-        save();
-      });
-      const syncPairRows = () => {
-        const block = selected();
-        if (!block) return;
-        const rows = [...app.querySelectorAll('.pair-row')];
-        if (!rows.length) return;
-        block.pairs = rows.map((row) => ({
-          item: row.querySelector('[data-pair-item]')?.value?.trim() || '',
-          target: row.querySelector('[data-pair-target]')?.value?.trim() || ''
-        })).filter((pair) => pair.item || pair.target);
-        save();
-      };
-      app.querySelectorAll('[data-pair-item],[data-pair-target]').forEach((input) => input.addEventListener('input', syncPairRows));
-      app.querySelector('[data-pair-add]')?.addEventListener('click', () => {
-        const block = selected();
-        if (!block) return;
-        block.pairs = [...(block.pairs || []), { item: '', target: '' }];
-        save();
-        updateSelectedClass();
-      });
-      app.querySelectorAll('[data-pair-remove]').forEach((button) => button.addEventListener('click', () => {
-        const block = selected();
-        if (!block) return;
-        const index = Number(button.dataset.pairRemove);
-        block.pairs = (block.pairs || []).filter((_, i) => i !== index);
-        save();
-        updateSelectedClass();
-      }));
-      app.querySelector('[data-pairs]')?.addEventListener('input', (event) => {
-        const block = selected();
-        if (!block) return;
-        block.pairs = event.target.value.split('\n').map((line) => {
-          const [item, target] = line.split('|').map((part) => part?.trim());
-          return { item, target };
-        }).filter((pair) => pair.item && pair.target);
-        save();
-      });
-      app.querySelectorAll('[data-file]').forEach((input) => input.onchange = () => bindFieldFile(input));
-
-      app.querySelector('#toggleFrame')?.addEventListener('change', (event) => {
-        const block = selected();
-        if (!block) return;
-        block.style.showBorder = event.target.checked;
-        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element) {
-          element.classList.toggle('no-frame', !block.style.showBorder);
-          element.style.setProperty('background', block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff'), 'important');
-        }
-        save();
-      });
-      app.querySelector('#bgTransparent')?.addEventListener('change', (event) => {
-        const block = selected();
-        if (!block) return;
-        block.style.bgTransparent = event.target.checked;
-        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element) element.style.setProperty('background', block.style.bgTransparent ? 'transparent' : (block.style.bgColor || '#ffffff'), 'important');
-        save();
-      });
-      app.querySelector('#bgColor')?.addEventListener('input', (event) => {
-        const block = selected();
-        if (!block) return;
-        block.style.bgColor = event.target.value;
-        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element && !block.style.bgTransparent) element.style.setProperty('background', block.style.bgColor || '#ffffff', 'important');
-        save();
-      });
-      const moveLayer = (mode) => {
-        const block = selected();
-        if (!block) return;
-        const blocks = current().blocks;
-        const zs = blocks.map((item) => Number(item.style?.z) || 1);
-        if (mode === 'forward') block.style.z = (Number(block.style.z) || 1) + 1;
-        if (mode === 'back') block.style.z = Math.max(1, (Number(block.style.z) || 1) - 1);
-        if (mode === 'top') block.style.z = Math.max(...zs, 1) + 1;
-        if (mode === 'bottom') block.style.z = 1;
-        const element = app.querySelector(`[data-block-id="${CSS.escape(block.id)}"]`);
-        if (element) element.style.zIndex = block.style.z;
-        save();
-      };
-      app.querySelector('#layerForward')?.addEventListener('click', () => moveLayer('forward'));
-      app.querySelector('#layerBack')?.addEventListener('click', () => moveLayer('back'));
-      app.querySelector('#layerTop')?.addEventListener('click', () => moveLayer('top'));
-      app.querySelector('#layerBottom')?.addEventListener('click', () => moveLayer('bottom'));
-
-      app.querySelector('#deleteBlock')?.addEventListener('click', () => {
-        const page = current();
-        page.blocks = page.blocks.filter((block) => block.id !== state.selectedId);
-        state.selectedId = null;
-        save();
-        render();
-      });
-    }
-
-    function bindEvents() {
-      app.querySelectorAll('[data-add]').forEach((button) => button.onclick = () => addBlock(button.dataset.add));
-      app.querySelector('#addPage').onclick = () => {
-        state.pages.push(defaultPage(state.pages.length + 1, label));
-        setActivePage(state.pages.length - 1);
-      };
-      app.querySelectorAll('[data-page]').forEach((button) => button.onclick = () => setActivePage(Number(button.dataset.page)));
-      app.querySelector('#prevPage').onclick = () => setActivePage(state.activePage - 1);
-      app.querySelector('#nextPage').onclick = () => setActivePage(state.activePage + 1);
-      app.querySelector('#pageTitle').oninput = (event) => {
-        current().title = event.target.value;
-        const activeTab = app.querySelector('.page-tab.is-active span');
-        if (activeTab) activeTab.textContent = event.target.value;
-        save();
-      };
-      app.querySelector('#stageW').onchange = (event) => {
-        state.stageWidth = Number(event.target.value) || state.stageWidth;
-        save();
-        render();
-      };
-      app.querySelector('#stageH').onchange = (event) => {
-        state.stageHeight = Number(event.target.value) || state.stageHeight;
-        save();
-        render();
-      };
-      app.querySelector('#exportZip').onclick = () => downloadActivityZip({ kind, title: state.title, pages: state.pages, stageWidth: state.stageWidth, stageHeight: state.stageHeight }, `${kind}-export`);
-      app.querySelector('#stage').addEventListener('click', (event) => {
-        if (event.target.id !== 'stage') return;
-        state.selectedId = null;
-        save();
-        updateSelectedClass();
-      });
-      app.querySelectorAll('.free-block').forEach((element) => {
-        const block = findBlock(element.dataset.blockId);
-        const handle = element.querySelector('.drag-handle');
-        element.addEventListener('click', (event) => {
-          event.stopPropagation();
-          state.selectedId = block.id;
-          save();
-          updateSelectedClass();
-        });
-        element.querySelectorAll('[contenteditable="true"]').forEach((editable) => {
-          editable.addEventListener('input', () => {
-            block.richText = editable.innerHTML;
-            save();
-          });
-        });
-        let start = null;
-        handle.addEventListener('pointerdown', (event) => {
-          event.preventDefault();
-          start = { px: event.clientX, py: event.clientY, x: Number(block.style.x) || 0, y: Number(block.style.y) || 0 };
-          handle.setPointerCapture(event.pointerId);
-        });
-        handle.addEventListener('pointermove', (event) => {
-          if (!start) return;
-          block.style.x = Math.max(0, Math.round(start.x + event.clientX - start.px));
-          block.style.y = Math.max(0, Math.round(start.y + event.clientY - start.py));
-          element.style.left = `${block.style.x}px`;
-          element.style.top = `${block.style.y}px`;
-        });
-        handle.addEventListener('pointerup', () => {
-          if (!start) return;
-          start = null;
-          save();
-          updateSelectedClass();
-        });
-        element.addEventListener('mouseup', () => {
-          const rect = element.getBoundingClientRect();
-          block.style.width = Math.round(rect.width);
-          block.style.height = Math.round(rect.height);
-          save();
-        });
-      });
-      bindPropsOnly();
-    }
-
     render();
   }
 
   function initSingle(type) {
-    const storeKey = `lite-single-${type}-v${VERSION}`;
-    let data = defaultBlock(type === 'choice' ? 'choice' : type);
-    if (type === 'interactiveVideo') data = defaultBlock('interactiveVideo', { width: 760, height: 440 });
-    try {
-      const saved = localStorage.getItem(storeKey);
-      if (saved) data = { ...data, ...JSON.parse(saved) };
-    } catch {}
-    data = normalizeBlock(data);
-    window.__singleData = data;
-    const save = () => { localStorage.setItem(storeKey, JSON.stringify(data)); window.__singleData = data; };
-
+    if (type === 'interactiveVideo') return initInteractiveVideoEditor();
+    const storeKey = `mark-single-${type}-${VERSION}`;
+    let block = defaultBlock(type); try { const saved = localStorage.getItem(storeKey); if (saved) block = normalizeBlock(JSON.parse(saved)); } catch {}
+    window.__singleBlock = block;
+    const save = () => { window.__singleBlock = block; localStorage.setItem(storeKey, JSON.stringify(block)); };
     function render() {
-      if (type === 'interactiveVideo') renderInteractiveVideoEditor();
-      else renderSimpleSingle();
-      attachRunHandlers(app, () => data);
+      app.innerHTML = `<section class="editor-top"><p class="eyebrow">Einzelfunktion</p><h1>${esc(typeName(type))}</h1></section>${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block active single-block" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
+      bindToolbar(app); bindSingleEvents(); attachRunHandlers(app, () => block); save();
     }
-
-    function renderSimpleSingle() {
-      app.innerHTML = `
-        <section class="single-layout">
-          <div class="panel single-preview"><h2>Vorschau</h2>${renderBlockContent(data, false)}</div>
-          <aside class="panel"><h2>Bearbeiten</h2>${singleProps(data)}<button id="exportZip" class="btn primary" type="button">HTML-ZIP herunterladen</button></aside>
-        </section>`;
-      bindSingleProps();
+    function bindSingleEvents() {
+      const el = app.querySelector('.single-block'); const rich = el.querySelector('.editable-text');
+      rich?.addEventListener('input', () => { block.richText = rich.innerHTML; save(); });
+      const ro = new ResizeObserver(() => { block.style.width = Math.round(el.offsetWidth); block.style.height = Math.round(el.offsetHeight); save(); }); ro.observe(el);
+      bindPropertiesForSingle();
+      app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title: typeName(type), stageWidth: 1200, stageHeight: 700, pages: [{ title: typeName(type), blocks: [block] }] }, `${type}-export`);
     }
-
-    function singleProps(block) {
-      if (block.type === 'choice') return `<label>Frage <input data-field="question" value="${esc(block.question)}"></label><label>Beschreibung <textarea data-field="description">${esc(block.description)}</textarea></label><label>Antworten <textarea data-list="answers">${esc(block.answers.join('\n'))}</textarea></label><label>Richtig, Nummern ab 0 <input data-correct value="${esc(block.correct.join(','))}"></label>`;
-      if (block.type === 'dragWords') return `<label>Text mit [Lücken] <textarea data-field="dragText">${esc(block.dragText)}</textarea></label>`;
-      if (block.type === 'dragDrop') return `<label>Paare</label>${renderPairsEditor(block.pairs || [], 'pair')}`;
-      return '';
+    function bindPropertiesForSingle() {
+      app.querySelectorAll('[data-prop]').forEach(input => input.addEventListener('input', () => { block[input.dataset.prop] = input.value; render(); }));
+      app.querySelectorAll('[data-prop-list]').forEach(input => input.addEventListener('input', () => { block[input.dataset.propList] = input.value.split('\n').filter(Boolean); render(); }));
+      app.querySelector('[data-prop-correct]')?.addEventListener('input', e => { block.correct = e.target.value.split(',').map(x=>Number(x.trim())).filter(Number.isFinite); save(); });
+      app.querySelectorAll('[data-style]').forEach(input => input.addEventListener('input', () => { block.style[input.dataset.style] = input.type==='checkbox'?input.checked:input.value; render(); }));
+      app.querySelectorAll('[data-file]').forEach(input => input.addEventListener('change', async () => { if (input.files?.[0]) { block[input.dataset.file] = await dataUrlFromFile(input.files[0]); render(); } }));
+      bindPairsSingle('blockpair', block);
     }
-
-    function bindSingleProps() {
-      app.querySelectorAll('[data-field]').forEach((input) => input.oninput = () => { data[input.dataset.field] = input.value; save(); render(); });
-      app.querySelectorAll('[data-list]').forEach((input) => input.oninput = () => { data[input.dataset.list] = input.value.split('\n').map((item) => item.trim()).filter(Boolean); save(); render(); });
-      app.querySelector('[data-correct]')?.addEventListener('input', (event) => { data.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite); save(); });
-      const syncSinglePairs = () => {
-        const rows = [...app.querySelectorAll('.pair-row')];
-        if (!rows.length) return;
-        data.pairs = rows.map((row) => ({
-          item: row.querySelector('[data-pair-item]')?.value?.trim() || '',
-          target: row.querySelector('[data-pair-target]')?.value?.trim() || ''
-        })).filter((pair) => pair.item || pair.target);
-        save();
-      };
-      app.querySelectorAll('[data-pair-item],[data-pair-target]').forEach((input) => input.addEventListener('input', syncSinglePairs));
-      app.querySelector('[data-pair-add]')?.addEventListener('click', () => { data.pairs = [...(data.pairs || []), { item: '', target: '' }]; save(); render(); });
-      app.querySelectorAll('[data-pair-remove]').forEach((button) => button.addEventListener('click', () => { const index = Number(button.dataset.pairRemove); data.pairs = (data.pairs || []).filter((_, i) => i !== index); save(); render(); }));
-      app.querySelector('[data-pairs]')?.addEventListener('input', (event) => { data.pairs = event.target.value.split('\n').map((line) => { const [item, target] = line.split('|').map((part) => part?.trim()); return { item, target }; }).filter((pair) => pair.item && pair.target); save(); render(); });
-      app.querySelector('#exportZip').onclick = () => downloadActivityZip({ kind: type, title: typeLabel(type), pages: [{ title: typeLabel(type), blocks: [data] }] }, `${type}-export`);
+    function bindPairsSingle(prefix, target) {
+      app.querySelector(`[data-${prefix}-add]`)?.addEventListener('click', () => { target.pairs.push({item:'', target:''}); render(); });
+      app.querySelectorAll(`[data-${prefix}-remove]`).forEach(btn => btn.onclick = () => { target.pairs.splice(Number(btn.dataset[`${prefix}Remove`]),1); render(); });
+      app.querySelectorAll(`[data-${prefix}-item]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Item`])].item = input.value; save(); });
+      app.querySelectorAll(`[data-${prefix}-target]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Target`])].target = input.value; save(); });
     }
-
-    function renderInteractiveVideoEditor(selectedActionIndex = 0) {
-      const currentAction = data.interactions[selectedActionIndex] || null;
-      app.innerHTML = `
-        <section class="iv-editor-layout">
-          <div class="panel iv-preview-panel">
-            <h2>Interaktives Video</h2>
-            <div class="iv-stage editor-iv-stage" data-interactions="${esc(JSON.stringify(data.interactions || []))}">${renderMedia(data.media, 'preview-video')}<div class="glass-overlay" hidden></div></div>
-            <div class="button-row"><button id="takeTime" class="btn" type="button">Aktuelle Zeit übernehmen</button><span id="currentTimeReadout" class="hint">Aktuelle Zeit: 0.0s</span></div>
-          </div>
-          <aside class="panel iv-settings-panel">
-            <h2>Video</h2>
-            <label>Video-URL oder YouTube-Link <input id="videoSource" value="${esc(data.media || '')}"></label>
-            <label>Lokale Videodatei <input id="videoFile" type="file" accept="video/*"></label>
-            <p class="hint">Für Zeitstopps sind lokale oder direkte Videodateien am zuverlässigsten. YouTube wird als iframe angezeigt.</p>
-            <div class="props-section">
-              <h2>Aktionen</h2>
-              <div class="action-list">${(data.interactions || []).map((action, index) => `<button class="action-pill ${index === selectedActionIndex ? 'is-active' : ''}" type="button" data-action-index="${index}">${Number(action.time).toFixed(1)}s · ${esc(typeLabel(action.type))}</button>`).join('')}</div>
-              <div class="button-row"><select id="newActionType"><option value="choice">Single & Multiple Choice</option><option value="dragWords">Drag the Words</option><option value="dragDrop">Drag and Drop</option></select><button id="addAction" class="btn" type="button">Aktion hinzufügen</button></div>
-            </div>
-            <div id="actionEditor">${renderActionEditor(currentAction, selectedActionIndex)}</div>
-            <button id="exportZip" class="btn primary" type="button">HTML-ZIP herunterladen</button>
-          </aside>
-        </section>`;
-      bindInteractiveVideoEditor(selectedActionIndex);
-      attachRunHandlers(app, () => data);
-    }
-
-    function renderActionEditor(action, index) {
-      if (!action) return '<p class="hint">Lege eine Aktion an oder wähle eine bestehende Aktion aus.</p>';
-      action = normalizeAction(action);
-      return `
-        <div class="props-section">
-          <h2>Aktion bearbeiten</h2>
-          <label>Sekunde <input data-action="time" type="number" step="0.1" value="${Number(action.time)}"></label>
-          <label>Typ <select data-action="type"><option ${action.type === 'choice' ? 'selected' : ''} value="choice">Single & Multiple Choice</option><option ${action.type === 'dragWords' ? 'selected' : ''} value="dragWords">Drag the Words</option><option ${action.type === 'dragDrop' ? 'selected' : ''} value="dragDrop">Drag and Drop</option></select></label>
-          <label>Frage <input data-action="question" value="${esc(action.question)}"></label>
-          <label>Beschreibung <textarea data-action="description">${esc(action.description)}</textarea></label>
-          ${action.type === 'choice' ? `<label>Antworten <textarea data-action-list="answers">${esc(action.answers.join('\n'))}</textarea></label><label>Richtig, Nummern ab 0 <input data-action-correct value="${esc(action.correct.join(','))}"></label>` : ''}
-          ${action.type === 'dragWords' ? `<label>Text mit [Lücken] <textarea data-action="dragText">${esc(action.dragText)}</textarea></label>` : ''}
-          ${action.type === 'dragDrop' ? `<label>Paare</label>${renderPairsEditor(action.pairs || [], 'action-pair')}` : ''}
-          <button id="deleteAction" class="btn danger" type="button">Aktion löschen</button>
-        </div>`;
-    }
-
-    function bindInteractiveVideoEditor(selectedActionIndex) {
-      const video = app.querySelector('video');
-      const readout = app.querySelector('#currentTimeReadout');
-      if (video && readout) video.ontimeupdate = () => { readout.textContent = `Aktuelle Zeit: ${video.currentTime.toFixed(1)}s`; };
-      app.querySelector('#videoSource').oninput = (event) => { data.media = event.target.value; save(); };
-      app.querySelector('#videoSource').onchange = () => renderInteractiveVideoEditor(selectedActionIndex);
-      app.querySelector('#videoFile').onchange = async (event) => {
-        if (!event.target.files?.[0]) return;
-        data.media = await dataUrlFromFile(event.target.files[0]);
-        save();
-        renderInteractiveVideoEditor(selectedActionIndex);
-      };
-      app.querySelector('#takeTime').onclick = () => {
-        if (!video || !data.interactions[selectedActionIndex]) return;
-        data.interactions[selectedActionIndex].time = Number(video.currentTime.toFixed(1));
-        save();
-        renderInteractiveVideoEditor(selectedActionIndex);
-      };
-      app.querySelectorAll('[data-action-index]').forEach((button) => button.onclick = () => renderInteractiveVideoEditor(Number(button.dataset.actionIndex)));
-      app.querySelector('#addAction').onclick = () => {
-        data.interactions.push(defaultAction(app.querySelector('#newActionType').value));
-        save();
-        renderInteractiveVideoEditor(data.interactions.length - 1);
-      };
-      const action = data.interactions[selectedActionIndex];
-      app.querySelectorAll('[data-action]').forEach((input) => {
-        input.oninput = () => {
-          if (!action) return;
-          action[input.dataset.action] = input.dataset.action === 'time' ? Number(input.value) || 0 : input.value;
-          if (input.dataset.action === 'type') Object.assign(action, normalizeAction({ ...action, type: input.value }));
-          save();
-        };
-        if (input.dataset.action === 'type') input.onchange = () => renderInteractiveVideoEditor(selectedActionIndex);
-      });
-      app.querySelectorAll('[data-action-list]').forEach((input) => input.oninput = () => { if (!action) return; action[input.dataset.actionList] = input.value.split('\n').map((item) => item.trim()).filter(Boolean); save(); });
-      app.querySelector('[data-action-correct]')?.addEventListener('input', (event) => { if (!action) return; action.correct = event.target.value.split(',').map((item) => Number(item.trim())).filter(Number.isFinite); save(); });
-      const syncActionPairs = () => {
-        if (!action) return;
-        const rows = [...app.querySelectorAll('.pair-row')];
-        if (!rows.length) return;
-        action.pairs = rows.map((row) => ({
-          item: row.querySelector('[data-action-pair-item]')?.value?.trim() || '',
-          target: row.querySelector('[data-action-pair-target]')?.value?.trim() || ''
-        })).filter((pair) => pair.item || pair.target);
-        save();
-      };
-      app.querySelectorAll('[data-action-pair-item],[data-action-pair-target]').forEach((input) => input.addEventListener('input', syncActionPairs));
-      app.querySelector('[data-action-pair-add]')?.addEventListener('click', () => { if (!action) return; action.pairs = [...(action.pairs || []), { item: '', target: '' }]; save(); render(); });
-      app.querySelectorAll('[data-action-pair-remove]').forEach((button) => button.addEventListener('click', () => { if (!action) return; const index = Number(button.dataset.actionPairRemove); action.pairs = (action.pairs || []).filter((_, i) => i !== index); save(); render(); }));
-      app.querySelector('[data-action-pairs]')?.addEventListener('input', (event) => { if (!action) return; action.pairs = event.target.value.split('\n').map((line) => { const [item, target] = line.split('|').map((part) => part?.trim()); return { item, target }; }).filter((pair) => pair.item && pair.target); save(); });
-      app.querySelector('#deleteAction')?.addEventListener('click', () => { data.interactions.splice(selectedActionIndex, 1); save(); renderInteractiveVideoEditor(Math.max(0, selectedActionIndex - 1)); });
-      app.querySelector('#exportZip').onclick = () => downloadActivityZip({ kind: type, title: 'Interaktives Video', pages: [{ title: 'Interaktives Video', blocks: [data] }] }, 'interactive-video-export');
-    }
-
     render();
   }
 
-  function exportData(data) { return `window.ACTIVITY_DATA = ${JSON.stringify(data, null, 2)};`; }
-  function exportIndex(data) {
-    return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(data.title || 'Aktivität')}</title><link rel="stylesheet" href="activity-style.css"></head><body><main class="export-shell"><section class="export-hero"><p class="eyebrow">Exportierte Aktivität</p><h1>${esc(data.title || 'Aktivität')}</h1></section><section id="viewer"></section><div class="export-nav"><button id="prev" type="button">Zurück</button><span id="count"></span><button id="next" type="button">Weiter</button></div></main><script src="activity-data.js"></script><script src="activity-runtime.js"></script></body></html>`;
-  }
-  function exportCss() {
-    return `body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#111827;padding:32px}.export-shell{max-width:1280px;margin:0 auto}.export-hero,.export-page{border:1.3px solid rgba(17,24,39,.65);padding:28px 32px;margin-bottom:24px;box-shadow:8px 16px 28px rgba(17,24,39,.08)}.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.14em;color:#5f6876;font-weight:850}h1{font-size:clamp(2rem,4vw,4rem);line-height:1;margin:0 0 12px}.export-stage{position:relative;background:#fff;border:1px solid rgba(17,24,39,.28);margin:0 auto;overflow:auto}.free-block{position:absolute;border:1.3px solid rgba(17,24,39,.34);background:#fff;padding:16px;overflow:auto}.media{max-width:100%;max-height:100%;display:block}.preview-video,.youtube-frame{width:100%;height:100%;min-height:260px;background:#111}.choice-stack{display:grid;gap:12px;margin:18px 0}.choice-option{border:1px solid rgba(17,24,39,.25);padding:12px 14px}.word-bank,.dnd-bank{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0 24px}.chip,.dnd-item{border:1px solid rgba(17,24,39,.34);background:#fff;border-radius:999px;padding:10px 14px;font-weight:800}.dtw-blank{display:inline-flex;min-width:110px;min-height:34px;border:1.4px dashed #2f5f8f;background:#e8f2fb;margin:0 5px 8px}.dnd-target-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin:24px 0 28px}.dnd-target{min-height:150px;padding:16px;border:1.5px dashed #2f5f8f;background:#e8f2fb}.feedback{margin-top:18px;padding:14px;background:#e8f2fb;border:1px solid rgba(47,95,143,.3)}.iv-stage{position:relative;width:100%;height:100%}.glass-overlay{position:absolute;left:6%;right:6%;bottom:8%;padding:24px;background:rgba(255,255,255,.78);backdrop-filter:blur(14px);box-shadow:0 18px 40px rgba(17,24,39,.2)}.export-nav{display:flex;gap:12px;align-items:center}.export-nav button,button{border:1px solid rgba(47,95,143,.35);background:#e8f2fb;color:#173d63;font-weight:850;padding:12px 16px;cursor:pointer}.slide-progress{height:8px;background:#e5e7eb;margin:0 0 18px}.slide-progress-bar{height:100%;background:#2f5f8f}`;
-  }
+  function typeName(type) { return ({ choice:'Single & Multiple Choice', dragWords:'Drag the Words', dragDrop:'Drag and Drop', interactiveVideo:'Interaktives Video' }[type] || type); }
 
-  function exportRuntime() {
-    return `(() => { const DATA = window.ACTIVITY_DATA || {}; const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); const isYoutube = u => /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)/i.test(u||''); const ytId = u => { const m = String(u||'').match(/(?:v=|youtu\\.be\\/|embed\\/)([A-Za-z0-9_-]{6,})/); return m ? m[1] : ''; }; let active = 0; const viewer = document.getElementById('viewer'); function media(src){ if(!src) return '<p>Kein Medium.</p>'; if(isYoutube(src)) return '<iframe class="youtube-frame" src="https://www.youtube.com/embed/'+esc(ytId(src))+'?rel=0" allowfullscreen></iframe>'; return '<video class="preview-video" src="'+esc(src)+'" controls></video>'; } function choice(b){ const multi=(b.correct||[]).length>1; return '<div data-run="choice"><h3>'+esc(b.question)+'</h3><p>'+esc(b.description||'')+'</p><div class="choice-stack">'+(b.answers||[]).map((a,i)=>'<label class="choice-option"><input type="'+(multi?'checkbox':'radio')+'" name="c'+esc(b.id)+'" value="'+i+'"> '+esc(a)+'</label>').join('')+'</div><button class="check-choice">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragWords(b){ let words=[]; const html=esc(b.dragText||'').replace(/\\[([^\\]]+)\\]/g,(_,w)=>{words.push(w);return '<span class="dtw-blank" data-answer="'+esc(w)+'"></span>'}); return '<div data-run="dragWords"><p>'+html+'</p><div class="word-bank">'+words.map(w=>'<button class="chip" draggable="true">'+esc(w)+'</button>').join('')+'</div><button class="check-dtw">Prüfen</button><div class="feedback" hidden></div></div>'; } function dragDrop(b){ const targets=[...new Set((b.pairs||[]).map(p=>p.target))]; return '<div data-run="dragDrop"><p>'+esc(b.description||'')+'</p><div class="dnd-bank">'+(b.pairs||[]).map(p=>'<button class="dnd-item" draggable="true" data-target="'+esc(p.target)+'">'+esc(p.item)+'</button>').join('')+'</div><div class="dnd-target-grid">'+targets.map(t=>'<div class="dnd-target" data-target="'+esc(t)+'"><strong>'+esc(t)+'</strong></div>').join('')+'</div><button class="check-dnd">Prüfen</button><div class="feedback" hidden></div></div>'; } function content(b){ if(b.type==='text') return b.richText||''; if(b.type==='link') return '<a href="'+esc(b.url||'#')+'" target="_blank">'+esc(b.linkText||'Link öffnen')+'</a>'; if(b.type==='image') return b.media?'<img class="media" src="'+esc(b.media)+'" alt="'+esc(b.alt||'')+'">':'<p>Kein Bild.</p>'; if(b.type==='video') return media(b.media); if(b.type==='interactiveVideo') return '<div class="iv-stage" data-interactions="'+esc(JSON.stringify(b.interactions||[]))+'">'+media(b.media)+'<div class="glass-overlay" hidden></div></div>'; if(b.type==='choice') return choice(b); if(b.type==='dragWords') return dragWords(b); if(b.type==='dragDrop') return dragDrop(b); return ''; } function render(){ const pages=DATA.pages||[]; const page=pages[Math.max(0,Math.min(active,pages.length-1))]||{title:DATA.title||'Aktivität',blocks:[]}; const pct=pages.length?((active+1)/pages.length)*100:100; viewer.innerHTML='<div class="slide-progress"><div class="slide-progress-bar" style="width:'+pct+'%"></div></div><section class="export-page"><h2>'+esc(page.title||'Seite')+'</h2><div class="export-stage" style="width:'+(DATA.stageWidth||1180)+'px;height:'+(DATA.stageHeight||720)+'px">'+(page.blocks||[]).map(b=>'<article class="free-block" data-block-id="'+esc(b.id)+'" style="left:'+(b.style?.x||0)+'px;top:'+(b.style?.y||0)+'px;width:'+(b.style?.width||320)+'px;height:'+(b.style?.height||160)+'px;background:'+(b.style?.bgTransparent?'transparent':(b.style?.bgColor||'#ffffff'))+';border-color:'+(b.style?.showBorder===false?'transparent':'rgba(17,24,39,.34)')+'">'+content(b)+'</article>').join('')+'</div></section>'; const c=document.getElementById('count'); if(c)c.textContent=pages.length?(active+1)+' von '+pages.length:''; attach(); } function attach(){ let dragged=null; document.querySelectorAll('.chip,.dnd-item').forEach(el=>{el.ondragstart=()=>dragged=el; el.onclick=()=>dragged=el;}); document.querySelectorAll('.dtw-blank').forEach(blank=>{const place=()=>{if(dragged?.classList.contains('chip')){blank.textContent=dragged.textContent; blank.dataset.filled=dragged.textContent; dragged.remove(); dragged=null;}}; blank.ondragover=e=>e.preventDefault(); blank.ondrop=place; blank.onclick=place;}); document.querySelectorAll('.dnd-target').forEach(zone=>{const place=()=>{if(dragged?.classList.contains('dnd-item')){zone.appendChild(dragged); dragged=null;}}; zone.ondragover=e=>e.preventDefault(); zone.ondrop=place; zone.onclick=place;}); document.querySelectorAll('.check-choice,.check-dtw,.check-dnd').forEach(btn=>btn.onclick=()=>{const f=btn.parentElement.querySelector('.feedback'); if(f){f.hidden=false; f.textContent='Eingabe gespeichert/geprüft.';}}); document.querySelectorAll('.iv-stage').forEach(stage=>{const video=stage.querySelector('video'); const overlay=stage.querySelector('.glass-overlay'); if(!video||!overlay)return; let actions=[]; try{actions=JSON.parse(stage.dataset.interactions||'[]').map(x=>({...x,done:false}));}catch{} video.ontimeupdate=()=>{const a=actions.find(x=>!x.done&&video.currentTime>=Number(x.time)); if(!a)return; a.done=true; video.pause(); overlay.hidden=false; overlay.innerHTML='<h3>'+esc(a.question)+'</h3><p>'+esc(a.description||'')+'</p><button>Weiter</button>'; overlay.querySelector('button').onclick=()=>{overlay.hidden=true; video.play().catch(()=>{});};};}); } document.getElementById('prev')?.addEventListener('click',()=>{active=Math.max(0,active-1);render();}); document.getElementById('next')?.addEventListener('click',()=>{active=Math.min((DATA.pages||[]).length-1,active+1);render();}); render(); })();`;
-  }
-
-  function downloadActivityZip(data, name) {
-    const files = [
-      { name: 'index.html', content: exportIndex(data) },
-      { name: 'activity-data.js', content: exportData(data) },
-      { name: 'activity-runtime.js', content: exportRuntime() },
-      { name: 'activity-style.css', content: exportCss() },
-      { name: 'README.txt', content: 'index.html öffnen. Lokale Video- und Bilddateien werden als Data-URL in activity-data.js gespeichert. YouTube-Links bleiben als URL erhalten.' }
-    ];
-    downloadZip(`${name || 'activity'}-export.zip`, files);
-  }
-
-  function makeZip(files) {
-    const encoder = new TextEncoder();
-    const crcTable = (() => {
-      const table = [];
-      for (let n = 0; n < 256; n++) {
-        let c = n;
-        for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-        table[n] = c >>> 0;
-      }
-      return table;
-    })();
-    const crc32 = (bytes) => {
-      let c = 0xffffffff;
-      for (const byte of bytes) c = crcTable[(c ^ byte) & 255] ^ (c >>> 8);
-      return (c ^ 0xffffffff) >>> 0;
-    };
-    const u16 = (arr, value) => arr.push(value & 255, (value >>> 8) & 255);
-    const u32 = (arr, value) => arr.push(value & 255, (value >>> 8) & 255, (value >>> 16) & 255, (value >>> 24) & 255);
-    let parts = [], central = [], offset = 0;
-    for (const file of files) {
-      const name = encoder.encode(file.name);
-      const data = encoder.encode(file.content);
-      const crc = crc32(data);
-      const local = [];
-      u32(local, 0x04034b50); u16(local, 20); u16(local, 0); u16(local, 0); u16(local, 0); u16(local, 0); u32(local, crc); u32(local, data.length); u32(local, data.length); u16(local, name.length); u16(local, 0);
-      parts.push(new Uint8Array(local), name, data);
-      const cen = [];
-      u32(cen, 0x02014b50); u16(cen, 20); u16(cen, 20); u16(cen, 0); u16(cen, 0); u16(cen, 0); u16(cen, 0); u32(cen, crc); u32(cen, data.length); u32(cen, data.length); u16(cen, name.length); u16(cen, 0); u16(cen, 0); u16(cen, 0); u16(cen, 0); u32(cen, 0); u32(cen, offset);
-      central.push(new Uint8Array(cen), name);
-      offset += local.length + name.length + data.length;
+  function initInteractiveVideoEditor() {
+    const storeKey = `mark-iv-${VERSION}`;
+    let data = defaultBlock('interactiveVideo'); data.interactions = [];
+    try { const saved = localStorage.getItem(storeKey); if (saved) data = normalizeBlock(JSON.parse(saved)); } catch {}
+    data.interactions = Array.isArray(data.interactions) ? data.interactions.map(normalizeAction) : [];
+    let selectedAction = data.interactions[0]?.id || null;
+    const save = () => localStorage.setItem(storeKey, JSON.stringify(data));
+    function render() {
+      const action = data.interactions.find(a => a.id === selectedAction) || null;
+      app.innerHTML = `<section class="editor-top"><p class="eyebrow">Einzelfunktion</p><h1>Interaktives Video</h1></section><section class="iv-editor-grid"><div class="iv-video-card"><label>Video-URL <input id="videoUrl" value="${esc(data.media)}" placeholder="YouTube-Link oder direkte Videodatei"></label><label>Lokale Videodatei <input id="videoFile" type="file" accept="video/*"></label><div class="iv-preview">${renderInteractiveVideo(data)}</div></div><aside class="iv-actions"><h2>Aktionen</h2><div class="action-create"><label>Zeitpunkt in Sekunden <input id="newTime" type="number" step="0.1" min="0" value="0"></label><button class="btn" id="takeTime" type="button">Aktuelle Zeit übernehmen</button><label>Aktionstyp <select id="newType"><option value="choice">Single & Multiple Choice</option><option value="dragWords">Drag the Words</option><option value="dragDrop">Drag and Drop</option></select></label><button class="btn primary" id="addAction" type="button">Aktion hinzufügen</button></div><div class="action-list">${data.interactions.length ? data.interactions.map(a=>`<button class="${a.id===selectedAction?'active':''}" data-action="${esc(a.id)}">${Number(a.time).toFixed(1)} s · ${esc(typeName(a.type))}</button>`).join('') : '<p class="muted">Noch keine Aktion angelegt.</p>'}</div>${action ? actionEditor(action) : '<p class="muted">Wähle eine Aktion aus oder füge eine neue hinzu.</p>'}</aside></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
+      bindIvEvents(); attachRunHandlers(app, () => data); save();
     }
-    const centralSize = central.reduce((sum, part) => sum + part.length, 0);
-    const end = [];
-    u32(end, 0x06054b50); u16(end, 0); u16(end, 0); u16(end, files.length); u16(end, files.length); u32(end, centralSize); u32(end, offset); u16(end, 0);
-    return new Blob([...parts, ...central, new Uint8Array(end)], { type: 'application/zip' });
+    function actionEditor(a) {
+      let specific = '';
+      if (a.type === 'choice') specific = `<label>Antworten <textarea data-action-list="answers" rows="3">${esc(a.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en) <input data-action-correct value="${esc(a.correct.join(','))}"></label>`;
+      if (a.type === 'dragWords') specific = `<label>Text mit Lücken <textarea data-action-prop="dragText" rows="4">${esc(a.dragText)}</textarea></label>`;
+      if (a.type === 'dragDrop') specific = `${renderPairsEditor(a.pairs, 'actionpair')}`;
+      return `<div class="action-editor"><h3>Aktion bearbeiten</h3><label>Zeit <input data-action-prop="time" type="number" step="0.1" value="${esc(a.time)}"></label><label>Frage <input data-action-prop="question" value="${esc(a.question)}"></label><label>Beschreibung <input data-action-prop="description" value="${esc(a.description)}"></label>${specific}<button class="btn danger" data-action-delete type="button">Aktion löschen</button></div>`;
+    }
+    function bindIvEvents() {
+      app.querySelector('#videoUrl').oninput = e => { data.media = e.target.value; save(); };
+      app.querySelector('#videoFile').onchange = async e => { if (e.target.files?.[0]) { data.media = await dataUrlFromFile(e.target.files[0]); render(); } };
+      app.querySelector('#takeTime').onclick = () => { const v = app.querySelector('.iv-preview video'); app.querySelector('#newTime').value = v ? v.currentTime.toFixed(1) : '0'; };
+      app.querySelector('#addAction').onclick = () => { const a = defaultAction(app.querySelector('#newType').value); a.time = Number(app.querySelector('#newTime').value)||0; data.interactions.push(a); selectedAction = a.id; render(); };
+      app.querySelectorAll('[data-action]').forEach(btn => btn.onclick = () => { selectedAction = btn.dataset.action; render(); });
+      const a = data.interactions.find(x=>x.id===selectedAction);
+      if (a) {
+        app.querySelectorAll('[data-action-prop]').forEach(input => input.oninput = () => { a[input.dataset.actionProp] = input.dataset.actionProp==='time' ? Number(input.value)||0 : input.value; save(); refreshIvStage(); });
+        app.querySelector('[data-action-list]')?.addEventListener('input', e => { a.answers = e.target.value.split('\n').filter(Boolean); save(); });
+        app.querySelector('[data-action-correct]')?.addEventListener('input', e => { a.correct = e.target.value.split(',').map(x=>Number(x.trim())).filter(Number.isFinite); save(); });
+        app.querySelector('[data-action-delete]')?.addEventListener('click', () => { data.interactions = data.interactions.filter(x=>x.id!==a.id); selectedAction = data.interactions[0]?.id || null; render(); });
+        bindPairsIv('actionpair', a);
+      }
+      app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title:'Interaktives Video', stageWidth:1200, stageHeight:720, pages:[{title:'Interaktives Video', blocks:[data]}] }, 'interactive-video-export');
+    }
+    function refreshIvStage() { const stage = app.querySelector('.iv-stage'); if (stage) stage.dataset.interactions = JSON.stringify(data.interactions); }
+    function bindPairsIv(prefix, target) {
+      app.querySelector(`[data-${prefix}-add]`)?.addEventListener('click', () => { target.pairs.push({item:'',target:''}); render(); });
+      app.querySelectorAll(`[data-${prefix}-remove]`).forEach(btn => btn.onclick = () => { target.pairs.splice(Number(btn.dataset[`${prefix}Remove`]),1); render(); });
+      app.querySelectorAll(`[data-${prefix}-item]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Item`])].item = input.value; save(); });
+      app.querySelectorAll(`[data-${prefix}-target]`).forEach(input => input.oninput = () => { target.pairs[Number(input.dataset[`${prefix}Target`])].target = input.value; save(); });
+    }
+    render();
   }
 
-  function downloadZip(name, files) {
-    const url = URL.createObjectURL(makeZip(files));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  function exportIndex(data) {
+    return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(data.title||'Aktivität')}</title><link rel="stylesheet" href="activity-style.css"></head><body><main><h1>${esc(data.title||'Aktivität')}</h1><div id="viewer"></div><nav><button id="prev">Zurück</button><span id="count"></span><button id="next">Weiter</button></nav></main><script src="activity-data.js"></script><script src="activity-runtime.js"></script></body></html>`;
   }
+  function exportData(data) { return `window.ACTIVITY_DATA = ${JSON.stringify(data, null, 2)};`; }
+  function exportCss() { return document.querySelector('style[data-export-css]')?.textContent || `body{font-family:Inter,system-ui,sans-serif;margin:0;padding:32px;color:#111827}.export-stage{position:relative;border:1px solid #cbd5e1;background:#fff;overflow:auto}.free-block{position:absolute;border:1px solid rgba(47,95,143,.4);padding:12px;overflow:auto}.media-video,.youtube-frame{width:100%;height:100%;border:0}.media-img{max-width:100%;max-height:100%}.choice-stack,.word-bank,.dnd-bank{display:grid;gap:12px;margin:18px 0}.choice-option,.chip,.dnd-item{border:1px solid #cbd5e1;padding:10px;background:#fff}.dnd-target-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin:22px 0}.dnd-target{min-height:140px;border:1.5px dashed #2f5f8f;padding:14px;background:#eef6ff}.dtw-blank{display:inline-flex;min-width:100px;min-height:32px;border:1.5px dashed #2f5f8f}.glass-overlay{position:absolute;left:5%;right:5%;bottom:7%;background:rgba(255,255,255,.82);backdrop-filter:blur(12px);padding:24px;box-shadow:0 18px 40px rgba(17,24,39,.2)}.iv-stage{position:relative;width:100%;height:100%}.progress{height:8px;background:#e5e7eb}.progress span{display:block;height:100%;background:#2f5f8f}`; }
+  function exportRuntime() { return `(() => { const DATA=window.ACTIVITY_DATA||{}; let active=0; const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); const yt=u=>/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)/i.test(u||''); const yid=u=>{const m=String(u||'').match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);return m?m[1]:''}; function media(src){if(!src)return '<p>Kein Medium.</p>'; if(yt(src))return '<iframe class="youtube-frame" src="https://www.youtube.com/embed/'+esc(yid(src))+'?rel=0" allowfullscreen></iframe>'; return '<video class="media-video" src="'+esc(src)+'" controls></video>';} function choice(b){const multi=(b.correct||[]).length>1;return '<div data-run="choice"><h3>'+esc(b.question)+'</h3><p>'+esc(b.description||'')+'</p><div class="choice-stack">'+(b.answers||[]).map((a,i)=>'<label class="choice-option"><input type="'+(multi?'checkbox':'radio')+'" name="c'+esc(b.id)+'" value="'+i+'"> '+esc(a)+'</label>').join('')+'</div><button class="check-choice">Prüfen</button><div class="feedback" hidden></div></div>';} function dtw(b){let words=[];let h=esc(b.dragText||'').replace(/\[([^\]]+)\]/g,(_,w)=>{words.push(w);return '<span class="dtw-blank" data-answer="'+esc(w)+'"></span>'});return '<div data-run="dragWords"><p>'+h+'</p><div class="word-bank">'+words.map(w=>'<button class="chip" draggable="true">'+esc(w)+'</button>').join('')+'</div><button class="check-dtw">Prüfen</button><div class="feedback" hidden></div></div>';} function dnd(b){const targets=[...new Set((b.pairs||[]).map(p=>p.target))];return '<div data-run="dragDrop"><p>'+esc(b.description||'')+'</p><div class="dnd-bank">'+(b.pairs||[]).map(p=>'<button class="dnd-item" draggable="true" data-target="'+esc(p.target)+'">'+esc(p.item)+'</button>').join('')+'</div><div class="dnd-target-grid">'+targets.map(t=>'<div class="dnd-target" data-target="'+esc(t)+'"><strong>'+esc(t)+'</strong></div>').join('')+'</div><button class="check-dnd">Prüfen</button><div class="feedback" hidden></div></div>';} function content(b){if(b.type==='text')return b.richText||''; if(b.type==='link')return '<a href="'+esc(b.url||'#')+'" target="_blank">'+esc(b.linkText||'Link')+'</a>'; if(b.type==='image')return b.media?'<img class="media-img" src="'+esc(b.media)+'">':'<p>Kein Bild.</p>'; if(b.type==='video')return media(b.media); if(b.type==='interactiveVideo')return '<div class="iv-stage" data-interactions="'+esc(JSON.stringify(b.interactions||[]))+'">'+media(b.media)+'<div class="glass-overlay" hidden></div></div>'; if(b.type==='choice')return choice(b); if(b.type==='dragWords')return dtw(b); if(b.type==='dragDrop')return dnd(b); return '';} function render(){const pages=DATA.pages||[];const p=pages[active]||{blocks:[]};document.getElementById('viewer').innerHTML='<div class="progress"><span style="width:'+(((active+1)/(pages.length||1))*100)+'%"></span></div><h2>'+esc(p.title||'Seite')+'</h2><section class="export-stage" style="width:'+(DATA.stageWidth||1200)+'px;height:'+(DATA.stageHeight||700)+'px">'+(p.blocks||[]).map(b=>'<article class="free-block" style="left:'+(b.style?.x||0)+'px;top:'+(b.style?.y||0)+'px;width:'+(b.style?.width||300)+'px;height:'+(b.style?.height||160)+'px;z-index:'+(b.style?.z||1)+';background:'+(b.style?.bgTransparent?'transparent':(b.style?.bgColor||'#fff'))+';border-color:'+(b.style?.showBorder===false?'transparent':'rgba(47,95,143,.4)')+'">'+content(b)+'</article>').join('')+'</section>';document.getElementById('count').textContent=(active+1)+' von '+pages.length;attach();} function attach(){let dragged=null;document.querySelectorAll('.chip,.dnd-item').forEach(e=>{e.ondragstart=()=>dragged=e;e.onclick=()=>dragged=e});document.querySelectorAll('.dtw-blank').forEach(b=>{const p=()=>{if(dragged?.classList.contains('chip')){b.textContent=dragged.textContent;b.dataset.filled=dragged.textContent;dragged.remove();dragged=null}};b.ondragover=e=>e.preventDefault();b.ondrop=p;b.onclick=p});document.querySelectorAll('.dnd-target').forEach(z=>{const p=()=>{if(dragged?.classList.contains('dnd-item')){z.appendChild(dragged);dragged=null}};z.ondragover=e=>e.preventDefault();z.ondrop=p;z.onclick=p});document.querySelectorAll('.check-choice,.check-dtw,.check-dnd').forEach(btn=>btn.onclick=()=>{const f=btn.parentElement.querySelector('.feedback');if(f){f.hidden=false;f.textContent='Geprüft.'}});document.querySelectorAll('.iv-stage').forEach(s=>{const v=s.querySelector('video'),o=s.querySelector('.glass-overlay');if(!v||!o)return;let as=[];try{as=JSON.parse(s.dataset.interactions||'[]').map(x=>({...x,done:false}))}catch{}v.ontimeupdate=()=>{const a=as.find(x=>!x.done&&v.currentTime>=Number(x.time));if(!a)return;a.done=true;v.pause();o.hidden=false;o.innerHTML='<h3>'+esc(a.question)+'</h3><p>'+esc(a.description||'')+'</p><button>Weiter</button>';o.querySelector('button').onclick=()=>{o.hidden=true;v.play().catch(()=>{})}}})} document.getElementById('prev').onclick=()=>{active=Math.max(0,active-1);render()};document.getElementById('next').onclick=()=>{active=Math.min((DATA.pages||[]).length-1,active+1);render()};render(); })();`; }
+  function downloadActivityZip(data, name) { downloadZip(`${name}.zip`, [{name:'index.html',content:exportIndex(data)},{name:'activity-data.js',content:exportData(data)},{name:'activity-runtime.js',content:exportRuntime()},{name:'activity-style.css',content:exportCss()},{name:'README.txt',content:'index.html öffnen. Medien werden als Data-URL oder URL gespeichert.'}]); }
+  function makeZip(files) { const enc=new TextEncoder(); const table=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})(); const crc32=bytes=>{let c=0xffffffff;for(const b of bytes)c=table[(c^b)&255]^(c>>>8);return(c^0xffffffff)>>>0}; const u16=(a,v)=>a.push(v&255,(v>>>8)&255),u32=(a,v)=>a.push(v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255); let parts=[],central=[],offset=0; for(const f of files){const name=enc.encode(f.name),data=enc.encode(f.content),crc=crc32(data),local=[];u32(local,0x04034b50);u16(local,20);u16(local,0);u16(local,0);u16(local,0);u16(local,0);u32(local,crc);u32(local,data.length);u32(local,data.length);u16(local,name.length);u16(local,0);parts.push(new Uint8Array(local),name,data);const cen=[];u32(cen,0x02014b50);u16(cen,20);u16(cen,20);u16(cen,0);u16(cen,0);u16(cen,0);u16(cen,0);u32(cen,crc);u32(cen,data.length);u32(cen,data.length);u16(cen,name.length);u16(cen,0);u16(cen,0);u16(cen,0);u16(cen,0);u32(cen,0);u32(cen,offset);central.push(new Uint8Array(cen),name);offset+=local.length+name.length+data.length} const size=central.reduce((s,p)=>s+p.length,0),end=[];u32(end,0x06054b50);u16(end,0);u16(end,0);u16(end,files.length);u16(end,files.length);u32(end,size);u32(end,offset);u16(end,0);return new Blob([...parts,...central,new Uint8Array(end)],{type:'application/zip'}); }
+  function downloadZip(name, files) { const url=URL.createObjectURL(makeZip(files)); const a=document.createElement('a'); a.href=url; a.download=name; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); }
 
   if (editorType === 'course') initContainer('course');
   if (editorType === 'book') initContainer('book');
   if (editorType === 'choice') initSingle('choice');
   if (editorType === 'drag-words') initSingle('dragWords');
   if (editorType === 'drag-drop') initSingle('dragDrop');
-  if (editorType === 'interactive-video') initSingle('interactiveVideo');
+  if (editorType === 'interactive-video') initInteractiveVideoEditor();
 })();

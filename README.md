@@ -1,1 +1,1 @@
-Separate Editor-Webseite mit direkt integrierter Course-Presentation-Testeinbindung auf der Startseite. Version 59.
+Separate Editor-Webseite v60. Container: Course Presentation, Interactive Book. Einzelfunktionen: Interaktives Video, Single & Multiple Choice, Drag the Words, Drag and Drop. Exporte erfolgen als HTML-ZIP.
