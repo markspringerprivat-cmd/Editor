@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Book – Editor</title>
+  <link rel="stylesheet" href="style.css?v=50" />
+</head>
+<body id="top" data-page="h5p-lite" data-activity="interactive-book">
+  <main class="page-shell h5p-lite-shell">
+    <a class="back-link" href="index.html#top">← Zur Editor-Übersicht</a>
+
+    <section class="iv-hero blind-readable uniform-hover" data-blind-target="h5p-lite-intro" tabindex="0" role="button" aria-label="Einführung vorlesen">
+      <p class="eyebrow">Eigene H5P-ähnliche Testfunktion</p>
+      <h1>Interactive Book</h1>
+      <p>Erstelle ein Interactive Book als Container: Jede Buchseite kann Text, Bild, Video, interaktives Video, Multiple Choice, Drag the Words oder Drag and Drop enthalten.</p>
+    </section>
+
+    <div class="blind-mode-row">
+      <button class="blind-mode-toggle" id="blindModeToggle" type="button" aria-pressed="false">Vorlesemodus: aus</button>
+      <p class="blind-mode-hint" id="blindModeHint" hidden></p>
+    </div>
+
+    <div class="top-divider" aria-hidden="true"></div>
+
+    <section class="h5p-lite-layout" aria-label="Interactive-Book-Editor">
+      <div class="h5p-lite-book-preview">
+        <nav class="h5p-lite-book-nav" id="bookNav" aria-label="Buchseiten"></nav>
+        <article class="h5p-lite-book-page" id="bookPreview"></article>
+      </div>
+      <div class="iv-editor-stack">
+        <section class="iv-editor-panel blind-readable" data-blind-target="h5p-lite-panel" tabindex="0" role="button" aria-label="Editor vorlesen">
+          <h2>Buchseite bearbeiten</h2>
+          <div class="iv-field"><label for="titleInput">Titel der Sammlung</label><input id="titleInput" type="text" /></div>
+          <div class="iv-field"><label for="itemTitle">Titel dieser Seite/Folie</label><input id="itemTitle" type="text" /></div>
+          <div class="iv-field"><label for="itemType">Inhaltstyp</label><select id="itemType">
+            <option value="text">Text</option>
+            <option value="imageText">Bild mit Text</option>
+            <option value="video">Video</option>
+            <option value="interactiveVideo">Interaktives Video</option>
+            <option value="multipleChoice">Multiple Choice</option>
+            <option value="dragWords">Drag the Words</option>
+            <option value="dragDrop">Drag and Drop</option>
+          </select></div>
+          <div class="iv-field" data-type-fields="text imageText video interactiveVideo"><label for="itemText">Text / Beschreibung</label><textarea id="itemText"></textarea></div>
+          <div class="iv-field" data-type-fields="imageText video interactiveVideo"><label for="itemMedia">Bild- oder Video-URL</label><input id="itemMedia" type="url" placeholder="https://..." /></div>
+          <div class="iv-field" data-type-fields="multipleChoice"><label for="itemQuestion">Frage</label><textarea id="itemQuestion"></textarea></div>
+          <div class="iv-field" data-type-fields="multipleChoice"><label for="itemDescription">Zusatztext</label><textarea id="itemDescription"></textarea></div>
+          <div class="iv-field" data-type-fields="multipleChoice"><label for="itemAnswers">Antwortmöglichkeiten, eine pro Zeile</label><textarea id="itemAnswers"></textarea></div>
+          <div class="iv-field" data-type-fields="multipleChoice"><label for="itemCorrect">Richtige Antwort</label><select id="itemCorrect"></select></div>
+          <div class="iv-field" data-type-fields="dragWords"><label for="itemDragText">Text mit Ziehwörtern</label><textarea id="itemDragText" rows="7"></textarea><p class="iv-marker-meta">Ziehwörter mit eckigen Klammern markieren, zum Beispiel: [Wartezeit].</p></div>
+          <div class="iv-field" data-type-fields="dragDrop"><label for="itemPairs">Begriff | Zielbereich</label><textarea id="itemPairs" rows="7"></textarea><p class="iv-marker-meta">Eine Zuordnung pro Zeile, zum Beispiel: Wartezeit | Gesprächsführung</p></div>
+          <div class="iv-field" data-type-fields="interactiveVideo"><label for="itemInteractions">Interaktionen im Video</label><textarea id="itemInteractions" rows="7"></textarea><p class="iv-marker-meta">Format: Zeit in Sekunden | Frage | Antwort 1;Antwort 2;Antwort 3 | Nummer der richtigen Antwort ab 0</p></div>
+          <div class="iv-button-row"><button class="iv-primary-button" id="addPage" type="button">Seite hinzufügen</button><button class="iv-danger-button" id="deletePage" type="button">Seite löschen</button></div>
+        </section>
+        <section class="iv-list-panel h5p-lite-config-panel">
+          <h2>Konfiguration</h2>
+          <div class="iv-field">
+            <label for="configArea">Konfiguration kopieren oder einfügen</label>
+            <textarea id="configArea" spellcheck="false"></textarea>
+          </div>
+          <div class="iv-button-row">
+            <button class="iv-secondary-button" id="exportButton" type="button">JSON exportieren</button>
+            <button class="iv-primary-button" id="downloadHtmlButton" type="button">HTML-ZIP herunterladen</button>
+            <button class="iv-secondary-button" id="importButton" type="button">Importieren</button>
+            <button class="iv-danger-button" id="resetButton" type="button">Zurücksetzen</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="script.js?v=50"></script>
+  <script src="activity-editor.js?v=50"></script>
+</body>
+</html>
