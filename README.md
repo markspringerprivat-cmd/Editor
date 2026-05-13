@@ -1,1 +1,1 @@
-Separate Editor-Webseite v60. Container: Course Presentation, Interactive Book. Einzelfunktionen: Interaktives Video, Single & Multiple Choice, Drag the Words, Drag and Drop. Exporte erfolgen als HTML-ZIP.
+Separate Editor-Webseite v62. Container und Einzelfunktionen mit lokalen Video-Assets, optionalen Rahmen/Schatten und HTML-ZIP-Export.
