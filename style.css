@@ -113,3 +113,45 @@ button::before,button::after,.btn::before,.btn::after{content:none!important;dis
 .course-slide-strip{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .course-slide-strip h2{width:100%;margin:0 0 4px}
 @media (max-width:980px){.inline-iv-split{grid-template-columns:1fr}}
+
+
+/* v68 Interactive Video layout fixes */
+.iv-side-panel,
+.refined-iv-builder,
+.refined-iv-builder * {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.iv-side-panel {
+  overflow: hidden;
+}
+.refined-iv-builder {
+  width: 100%;
+  min-width: 0;
+}
+.refined-iv-builder input,
+.refined-iv-builder textarea,
+.refined-iv-builder select {
+  width: 100%;
+  min-width: 0;
+}
+.refined-iv-builder .iv-builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.refined-iv-builder .iv-builder-actions .btn {
+  white-space: normal;
+}
+.iv-stage .glass-overlay .iv-card > .test-button-row {
+  display: none !important;
+}
+.iv-stage .glass-overlay .activity-preview .test-button-row {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.iv-stage .glass-overlay .continue-video {
+  margin-left: 0;
+}

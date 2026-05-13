@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '67';
+  const VERSION = '68';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -288,9 +288,15 @@
     overlay.hidden = false;
     overlay.classList.remove('editing-overlay');
     overlay.setAttribute('style', ivOverlayStyle(action));
-    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Weiter</button></div></div>`;
+    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}</div>`;
+    const row = overlay.querySelector('.activity-preview .test-button-row') || overlay.querySelector('.test-button-row');
+    const btn = document.createElement('button');
+    btn.className = 'btn primary continue-video';
+    btn.type = 'button';
+    btn.textContent = 'Weiter';
+    (row || overlay.querySelector('.iv-card')).appendChild(btn);
     attachRunHandlers(overlay, () => action);
-    overlay.querySelector('.continue-video')?.addEventListener('click', () => { overlay.hidden = true; onContinue?.(); });
+    btn.addEventListener('click', () => { overlay.hidden = true; onContinue?.(); });
   }
 
   function blockStyle(block) {
@@ -703,9 +709,15 @@ function showEditableIvOverlay(overlay, action, onChange = null) {
     overlay.hidden = false;
     overlay.setAttribute('style', ivOverlayStyle(action));
     overlay.classList.add('editing-overlay');
-    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}<div class="test-button-row"><button class="btn primary continue-video" type="button">Weiter</button></div></div>`;
+    overlay.innerHTML = `<div class="iv-card">${renderAction(action)}</div>`;
+    const row = overlay.querySelector('.activity-preview .test-button-row') || overlay.querySelector('.test-button-row');
+    const btn = document.createElement('button');
+    btn.className = 'btn primary continue-video';
+    btn.type = 'button';
+    btn.textContent = 'Weiter';
+    (row || overlay.querySelector('.iv-card')).appendChild(btn);
     attachRunHandlers(overlay, () => action);
-    overlay.querySelector('.continue-video')?.addEventListener('click', () => { overlay.hidden = true; overlay.classList.remove('editing-overlay'); });
+    btn.addEventListener('click', () => { overlay.hidden = true; overlay.classList.remove('editing-overlay'); });
   }
 
   function exportCss() { return `body{font-family:Inter,system-ui,sans-serif;margin:0;padding:32px;color:#111827;background:#fff}main{max-width:1200px;margin:0 auto}h1{letter-spacing:-.035em}.export-stage{position:relative;border:1px solid #cbd5e1;background:#fff;overflow:hidden}.free-block{position:absolute;border:1px solid rgba(47,95,143,.4);padding:12px;overflow:auto;box-shadow:none;background:#fff}.media-video,.youtube-frame{width:100%;height:100%;border:0;background:#111}.media-img{max-width:100%;max-height:100%;display:block}.choice-stack,.word-bank,.dnd-bank{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 26px}.choice-option,.chip,.dnd-item{border:1px solid #cbd5e1;padding:10px 14px;background:#fff;border-radius:18px;font-weight:760;cursor:pointer}.choice-option.is-correct,.dtw-blank.is-correct,.dnd-item.is-correct{background:#dcfce7}.choice-option.is-wrong{background:#fee2e2}.dnd-target-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:20px;margin:24px 0 30px}.dnd-target{min-height:155px;border:1.5px dashed #2f5f8f;padding:16px;background:#eef6ff}.dtw-blank{display:inline-flex;min-width:110px;min-height:34px;margin:0 6px 8px;padding:4px 8px;border:1.5px dashed #2f5f8f;background:#e8f2fb;vertical-align:middle}.feedback{margin-top:18px;padding:14px;background:#e8f2fb;border:1px solid rgba(47,95,143,.3)}button,.check-choice,.check-dtw,.check-dnd,.retry-activity,.continue-video{appearance:none;-webkit-appearance:none;border:1px solid rgba(47,95,143,.35);background:#fff!important;background-image:none!important;color:#173d63;font-weight:800;padding:11px 15px;cursor:pointer;box-shadow:none!important;text-shadow:none!important;filter:none!important}.check-choice,.check-dtw,.check-dnd,.continue-video{background:#2f6fa9!important;color:#fff!important;border-color:#2f6fa9!important}.test-button-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.glass-overlay{position:absolute;left:50%;top:50%;width:min(86%,920px);max-height:78%;transform:translate(-50%,-50%);background:rgba(255,255,255,.88);backdrop-filter:blur(12px);padding:24px;box-shadow:none;border:1px solid transparent;overflow:auto}.iv-stage{position:relative;width:100%;height:100%}.progress{height:8px;background:#e5e7eb}.progress span{display:block;height:100%;background:#2f5f8f}nav{display:flex;gap:12px;align-items:center;margin-top:18px}`; }
