@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '72';
+  const VERSION = '73';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -214,18 +214,28 @@
     const min = minBlockSize(b.type);
     const inner = el.querySelector('.block-inner');
     if (!inner) return min;
+
+    // Wichtig: nicht die aktuelle Blockhöhe als Inhaltsbedarf verwenden.
+    // Sonst addiert sich der aktive Verschiebegriff bei jedem ResizeObserver-Lauf
+    // wieder auf die Höhe und der Block wächst scheinbar endlos.
+    const content = inner.firstElementChild || inner;
+    const computed = window.getComputedStyle(inner);
+    const padX = (parseFloat(computed.paddingLeft) || 0) + (parseFloat(computed.paddingRight) || 0);
+    const padY = (parseFloat(computed.paddingTop) || 0) + (parseFloat(computed.paddingBottom) || 0);
     const handleExtra = el.classList.contains('active') ? 18 : 0;
-    const neededW = Math.ceil(Math.max(inner.scrollWidth, inner.offsetWidth) + 2);
-    const neededH = Math.ceil(Math.max(inner.scrollHeight + handleExtra, inner.offsetHeight + handleExtra) + 2);
+    const neededW = Math.ceil(Math.max(content.scrollWidth || 0, content.offsetWidth || 0) + padX + 4);
+    const neededH = Math.ceil(Math.max(content.scrollHeight || 0, content.offsetHeight || 0) + padY + handleExtra + 4);
     return { width: Math.max(min.width, neededW), height: Math.max(min.height, neededH) };
   }
 
   function fitBlockElement(el, b, allowGrow = true) {
     if (!el || !b?.style) return;
     const need = requiredBlockSizeFromElement(el, b);
-    const w = allowGrow ? Math.max(Number(b.style.width) || 0, need.width) : need.width;
-    const h = allowGrow ? Math.max(Number(b.style.height) || 0, need.height) : need.height;
-    if (w !== b.style.width || h !== b.style.height) {
+    const currentW = Math.round(el.offsetWidth || Number(b.style.width) || 0);
+    const currentH = Math.round(el.offsetHeight || Number(b.style.height) || 0);
+    const w = allowGrow ? Math.max(currentW, Number(b.style.width) || 0, need.width) : need.width;
+    const h = allowGrow ? Math.max(currentH, Number(b.style.height) || 0, need.height) : need.height;
+    if (w !== Number(b.style.width) || h !== Number(b.style.height)) {
       b.style.width = w; b.style.height = h;
       el.style.width = w + 'px'; el.style.height = h + 'px';
     }

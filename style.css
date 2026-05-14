@@ -605,3 +605,116 @@ body[data-editor="course"] #propertiesHost .answer-remove,
 body[data-editor="book"] #propertiesHost .answer-remove{
   width:100%;
 }
+
+/* v73: Fix für endlos wachsendes Funktionsfenster und sichere Innenabstände */
+.free-block,
+.free-block.active{
+  max-width:calc(100% - 24px)!important;
+  max-height:calc(100% - 24px)!important;
+  overflow:visible!important;
+}
+.free-block.active{
+  resize:both!important;
+}
+.free-block .block-inner,
+.free-block.active .block-inner{
+  height:auto!important;
+  min-height:0!important;
+  overflow:visible!important;
+}
+.activity-preview,
+.activity-preview h3,
+.activity-preview p,
+.choice-stack,
+.word-bank,
+.dnd-bank,
+.dnd-target-grid,
+.test-button-row{
+  max-width:100%;
+  min-height:0!important;
+}
+.activity-preview{
+  width:100%;
+  overflow:visible!important;
+}
+body[data-editor="choice"] .single-stage,
+body[data-editor="drag-words"] .single-stage,
+body[data-editor="drag-drop"] .single-stage{
+  height:820px!important;
+  max-height:calc(100vh - 190px)!important;
+  overflow:auto!important;
+  resize:vertical!important;
+}
+body[data-editor="choice"] .single-block,
+body[data-editor="drag-words"] .single-block,
+body[data-editor="drag-drop"] .single-block{
+  max-width:calc(100% - 112px)!important;
+}
+#propertiesHost,
+#propertiesHost *,
+.iv-side-panel,
+.iv-side-panel *{
+  box-sizing:border-box;
+  max-width:100%;
+}
+#propertiesHost{
+  overflow:hidden;
+}
+#propertiesHost input,
+#propertiesHost textarea,
+#propertiesHost select,
+.iv-side-panel input,
+.iv-side-panel textarea,
+.iv-side-panel select{
+  width:100%;
+  min-width:0;
+}
+#propertiesHost .pair-editor,
+.iv-side-panel .pair-editor{
+  min-width:0!important;
+  width:100%;
+}
+#propertiesHost .pair-head,
+#propertiesHost .pair-row,
+.iv-side-panel .pair-head,
+.iv-side-panel .pair-row{
+  grid-template-columns:1fr!important;
+}
+#propertiesHost .pair-head span:last-child,
+.iv-side-panel .pair-head span:last-child{
+  display:none;
+}
+#propertiesHost .pair-row .btn,
+.iv-side-panel .pair-row .btn{
+  width:100%;
+}
+#propertiesHost .answer-card,
+.iv-side-panel .answer-card{
+  grid-template-columns:1fr!important;
+  align-items:stretch;
+}
+#propertiesHost .answer-remove,
+.iv-side-panel .answer-remove{
+  width:100%;
+}
+.action-list-row{
+  grid-template-columns:minmax(0,1fr) 36px!important;
+  overflow:hidden;
+}
+.action-delete{
+  width:36px!important;
+  min-width:36px!important;
+  padding:0!important;
+}
+.visual-list .action-select,
+.compact-list .action-select{
+  min-width:0;
+  overflow:hidden;
+}
+.visual-list .action-select strong,
+.compact-list .action-select strong,
+.visual-list .action-select small,
+.compact-list .action-select small{
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
