@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '71';
+  const VERSION = '72';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -64,7 +64,7 @@
       type,
       question: 'Neue Frage',
       description: 'Wähle eine Antwort aus.',
-      answers: ['Antwort 1', 'Antwort 2'],
+      answers: ['Neue Antwort'],
       correct: [0],
       dragText: 'Text mit [Lücke].',
       pairs: [{ item: 'Begriff', target: 'Zielbereich' }],
@@ -83,7 +83,7 @@
       alt: '',
       question: 'Welche Antwort passt?',
       description: 'Wähle die passende Antwort aus.',
-      answers: ['Antwort 1', 'Antwort 2'],
+      answers: ['Neue Antwort'],
       correct: [0],
       dragText: 'Eine professionelle Gesprächsführung braucht [Wartezeit] und [Rückmeldung].',
       pairs: [
@@ -173,6 +173,7 @@
       const run = () => {
         restoreRange();
         document.execCommand(control.dataset.cmd, false, control.value || null);
+        emitEditableInput();
       };
       control.addEventListener(control.type === 'color' ? 'input' : 'click', run);
       if (control.tagName === 'SELECT') control.addEventListener('change', run);
@@ -182,7 +183,67 @@
       document.querySelectorAll('font[size="7"]').forEach(font => {
         const span = document.createElement('span'); span.style.fontSize = `${sel.value}px`; span.innerHTML = font.innerHTML; font.replaceWith(span);
       });
+      emitEditableInput();
     }));
+  }
+
+
+  function richToPlain(html = '') {
+    const div = document.createElement('div');
+    div.innerHTML = String(html || '');
+    return div.textContent || div.innerText || '';
+  }
+
+  function currentEditableElement() {
+    const sel = window.getSelection?.();
+    if (sel && sel.rangeCount) {
+      const node = sel.anchorNode;
+      const el = node?.nodeType === 1 ? node : node?.parentElement;
+      const editable = el?.closest?.('.editable-text, .editable-field, .dtw-text[contenteditable="true"]');
+      if (editable) return editable;
+    }
+    return document.activeElement?.closest?.('.editable-text, .editable-field, .dtw-text[contenteditable="true"]') || null;
+  }
+
+  function emitEditableInput() {
+    const el = currentEditableElement();
+    if (el) el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function requiredBlockSizeFromElement(el, b) {
+    const min = minBlockSize(b.type);
+    const inner = el.querySelector('.block-inner');
+    if (!inner) return min;
+    const handleExtra = el.classList.contains('active') ? 18 : 0;
+    const neededW = Math.ceil(Math.max(inner.scrollWidth, inner.offsetWidth) + 2);
+    const neededH = Math.ceil(Math.max(inner.scrollHeight + handleExtra, inner.offsetHeight + handleExtra) + 2);
+    return { width: Math.max(min.width, neededW), height: Math.max(min.height, neededH) };
+  }
+
+  function fitBlockElement(el, b, allowGrow = true) {
+    if (!el || !b?.style) return;
+    const need = requiredBlockSizeFromElement(el, b);
+    const w = allowGrow ? Math.max(Number(b.style.width) || 0, need.width) : need.width;
+    const h = allowGrow ? Math.max(Number(b.style.height) || 0, need.height) : need.height;
+    if (w !== b.style.width || h !== b.style.height) {
+      b.style.width = w; b.style.height = h;
+      el.style.width = w + 'px'; el.style.height = h + 'px';
+    }
+  }
+
+  function renderChoiceAnswersEditor(target, prefix = 'block', mode = 'multi') {
+    target.answers = Array.isArray(target.answers) && target.answers.length ? target.answers : ['Neue Antwort'];
+    const correct = Array.isArray(target.correct) ? target.correct.map(Number) : [0];
+    const inputType = mode === 'single' ? 'radio' : 'checkbox';
+    return `<div class="answer-editor" data-answer-editor="${prefix}">
+      <div class="answer-editor-head"><strong>Antworten</strong><span>Richtige Antwort direkt markieren.</span></div>
+      ${target.answers.map((answer, i) => `<div class="answer-card">
+        <label class="correct-tile" title="Richtige Antwort"><input type="${inputType}" name="${prefix}-correct-choice" data-${prefix}-answer-correct="${i}" ${correct.includes(i) ? 'checked' : ''}> richtig</label>
+        <label class="answer-text-label">Antwort <input data-${prefix}-answer-text="${i}" value="${esc(richToPlain(answer))}" placeholder="Antwort eingeben"></label>
+        <button class="answer-remove" type="button" data-${prefix}-answer-remove="${i}" ${target.answers.length <= 1 ? 'disabled' : ''}>×</button>
+      </div>`).join('')}
+      <button class="btn" type="button" data-${prefix}-answer-add>+ Neue Antwort hinzufügen</button>
+    </div>`;
   }
 
   function mediaHtml(src, cls = 'media-video') {
@@ -369,7 +430,7 @@
   function actionSpecificFields(action, prefix = 'draft') {
     const a = normalizeAction(action);
     if (a.type === 'choice') {
-      return `<div class="iv-field-block full"><label>Antworten <textarea data-${prefix}-list="answers" rows="4">${esc(a.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en) <input data-${prefix}-correct value="${esc(humanCorrectValue(a.correct || [0]))}" placeholder="z. B. 1 oder 1,3"></label><p class="muted small-note">Die Zählung beginnt bei 1: Antwort 1, Antwort 2, Antwort 3 …</p></div>`;
+      return `<div class="iv-field-block full">${renderChoiceAnswersEditor(a, prefix, 'multi')}</div>`;
     }
     if (a.type === 'dragWords') {
       return `<div class="iv-field-block full"><label>Text mit Lücken <textarea data-${prefix}-prop="dragText" rows="4">${esc(a.dragText)}</textarea></label><p class="muted small-note">Lücken mit eckigen Klammern markieren, z. B. [Wartezeit].</p></div>`;
@@ -426,10 +487,42 @@
     if (block.type === 'image') content = `<label>Bild-URL <input data-prop="media" value="${esc(block.media)}"></label><label>Bilddatei <input type="file" accept="image/*" data-file="media"></label>`;
     if (block.type === 'video') content = `<label>Video-URL <input data-prop="media" value="${esc(block.media)}" placeholder="Direkte Videodatei oder YouTube-Link"></label><label>Videodatei <input type="file" accept="video/*" data-file="media"></label>`;
     if (block.type === 'interactiveVideo') content = renderInlineInteractiveVideoEditor(block);
-    if (block.type === 'choice') content = `<label>Frage <input data-prop="question" value="${esc(block.question)}"></label><label>Beschreibung <input data-prop="description" value="${esc(block.description)}"></label><label>Antworten <textarea data-prop-list="answers" rows="3">${esc(block.answers.join('\n'))}</textarea></label><label>Richtige Antwort(en), z. B. 1 oder 1,3 <input data-prop-correct value="${esc(humanCorrectValue(block.correct||[0]))}"></label>`;
+    if (block.type === 'choice') content = `<label>Frage <input data-prop="question" value="${esc(richToPlain(block.question))}"></label><label>Beschreibung <input data-prop="description" value="${esc(richToPlain(block.description))}"></label>${renderChoiceAnswersEditor(block, 'blockchoice', 'multi')}`;
     if (block.type === 'dragWords') content = `<label>Text mit Lücken <textarea data-prop="dragText" rows="3">${esc(block.dragText)}</textarea></label>`;
     if (block.type === 'dragDrop') content = `<label>Aufgabentext <input data-prop="description" value="${esc(block.description)}"></label>${renderPairsEditor(block.pairs, 'blockpair')}`;
     return `<div class="properties-strip"><div class="prop-title">Element bearbeiten</div>${content}<label class="checkline"><input type="checkbox" data-style="bgTransparent" ${block.style.bgTransparent ? 'checked' : ''}> Hintergrund transparent</label><label>Hintergrundfarbe <input type="color" data-style="bgColor" value="${esc(block.style.bgColor || '#ffffff')}"></label><label class="checkline"><input type="checkbox" data-style="showBorder" ${block.style.showBorder !== false ? 'checked' : ''}> Rahmen anzeigen</label><label class="checkline"><input type="checkbox" data-style="showShadow" ${block.style.showShadow === true ? 'checked' : ''}> Schatten anzeigen</label><div class="layer-buttons"><button type="button" data-layer="back">Ebene zurück</button><button type="button" data-layer="front">Ebene vor</button><button type="button" data-layer="bottom">Ganz nach hinten</button><button type="button" data-layer="top">Ganz nach vorne</button><button class="danger" type="button" data-delete>Element löschen</button></div></div>`;
+  }
+
+
+  function bindChoiceAnswers(prefix, target, afterChange) {
+    const commit = (needsRender = false) => {
+      target.answers = Array.isArray(target.answers) && target.answers.length ? target.answers : ['Neue Antwort'];
+      target.correct = Array.isArray(target.correct) && target.correct.length ? target.correct.filter(i => i >= 0 && i < target.answers.length) : [0];
+      if (!target.correct.length) target.correct = [0];
+      afterChange?.(needsRender);
+    };
+    app.querySelectorAll(`[data-${prefix}-answer-text]`).forEach(input => input.addEventListener('input', () => {
+      const i = Number(input.dataset[`${prefix}AnswerText`]);
+      target.answers[i] = input.value;
+      commit(false);
+    }));
+    app.querySelectorAll(`[data-${prefix}-answer-correct]`).forEach(input => input.addEventListener('change', () => {
+      const checked = [...app.querySelectorAll(`[data-${prefix}-answer-correct]:checked`)].map(x => Number(x.dataset[`${prefix}AnswerCorrect`]));
+      target.correct = checked.length ? checked : [Number(input.dataset[`${prefix}AnswerCorrect`]) || 0];
+      commit(false);
+    }));
+    app.querySelector(`[data-${prefix}-answer-add]`)?.addEventListener('click', () => {
+      target.answers.push('Neue Antwort');
+      commit(true);
+    });
+    app.querySelectorAll(`[data-${prefix}-answer-remove]`).forEach(btn => btn.addEventListener('click', () => {
+      if (target.answers.length <= 1) return;
+      const idx = Number(btn.dataset[`${prefix}AnswerRemove`]);
+      target.answers.splice(idx, 1);
+      target.correct = (target.correct || []).map(i => i > idx ? i - 1 : i).filter(i => i !== idx && i >= 0 && i < target.answers.length);
+      if (!target.correct.length) target.correct = [0];
+      commit(true);
+    }));
   }
 
   function initContainer(kind) {
@@ -465,7 +558,7 @@
           </div>
         </section>
         <div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button><button class="btn" id="clearLocal">Lokale Speicherung löschen</button></div>`;
-      bindToolbar(app); bindContainerEvents(); attachRunHandlers(app, block); save();
+      bindToolbar(app); bindContainerEvents(); attachRunHandlers(app, block); setTimeout(() => { app.querySelectorAll('.free-block').forEach(el => { const bb = block(el.dataset.blockId); if (bb) fitBlockElement(el, bb, true); }); save(); }, 0); save();
     }
 
     function addBlock(type) {
@@ -490,7 +583,7 @@
       el.addEventListener('mousedown', e => { if (state.selectedId !== b.id) { state.selectedId = b.id; render(); } });
       const rich = el.querySelector('.editable-text');
       if (rich) rich.addEventListener('input', () => { b.richText = rich.innerHTML; save(); });
-      const ro = new ResizeObserver(() => { if (state.selectedId === b.id) { const min = minBlockSize(b.type); b.style.width = Math.max(Math.round(el.offsetWidth), min.width); b.style.height = Math.max(Math.round(el.offsetHeight), min.height); if (el.offsetWidth < min.width) el.style.width = min.width + 'px'; if (el.offsetHeight < min.height) el.style.height = min.height + 'px'; save(); } }); ro.observe(el);
+      const ro = new ResizeObserver(() => { if (state.selectedId === b.id) { const min = minBlockSize(b.type); b.style.width = Math.max(Math.round(el.offsetWidth), min.width); b.style.height = Math.max(Math.round(el.offsetHeight), min.height); fitBlockElement(el, b, true); save(); } }); ro.observe(el); setTimeout(() => { fitBlockElement(el, b, true); save(); }, 0);
       const handle = el.querySelector('.move-handle'); let start = null;
       handle?.addEventListener('mousedown', e => { e.preventDefault(); start = { x:e.clientX, y:e.clientY, left:b.style.x, top:b.style.y }; document.body.classList.add('dragging'); });
       document.addEventListener('mousemove', e => { if (!start) return; b.style.x = Math.max(0, start.left + e.clientX - start.x); b.style.y = Math.max(24, start.top + e.clientY - start.y); el.style.left = b.style.x+'px'; el.style.top = b.style.y+'px'; });
@@ -516,14 +609,16 @@
       }));
       app.querySelector('[data-delete]')?.addEventListener('click', () => { current().blocks = current().blocks.filter(x=>x.id!==b.id); state.selectedId=null; render(); });
       app.querySelectorAll('[data-layer]').forEach(btn => btn.addEventListener('click', () => { const z = maxZ(); if (btn.dataset.layer==='front') b.style.z += 1; if (btn.dataset.layer==='back') b.style.z = Math.max(1, b.style.z-1); if (btn.dataset.layer==='top') b.style.z = z+1; if (btn.dataset.layer==='bottom') b.style.z = 1; render(); }));
+      bindChoiceAnswers('blockchoice', b, (needsRender) => { updateSelectedDom(b); save(); if (needsRender) render(); });
       bindInlineIvEditor(b, render, save, updateSelectedDom);
       bindPairs('blockpair', b);
     }
     function updateSelectedDom(b) {
       const el = app.querySelector(`[data-block-id="${CSS.escape(b.id)}"]`); if (!el) return;
       el.setAttribute('style', blockStyle(b));
-      if (document.activeElement?.closest?.('#propertiesHost')) el.querySelector('.block-inner').innerHTML = renderBlockContent(b, false);
+      if (document.activeElement?.closest?.('#propertiesHost')) el.querySelector('.block-inner').innerHTML = renderBlockContent(b, true);
       attachRunHandlers(el, block);
+      setTimeout(() => { fitBlockElement(el, b, true); save(); }, 0);
     }
     function bindPairs(prefix, target) {
       app.querySelector(`[data-${prefix}-add]`)?.addEventListener('click', () => { target.pairs.push({item:'', target:''}); render(); });
@@ -542,6 +637,12 @@
     app.querySelectorAll(`[data-${prefix}-list]`).forEach(input => { out[input.dataset[`${prefix}List`]] = input.value.split('\n').filter(Boolean); });
     const correct = app.querySelector(`[data-${prefix}-correct]`);
     if (correct) out.correct = correct.value.split(',').map(x => Number(x.trim()) - 1).filter(x => Number.isFinite(x) && x >= 0);
+    const answerInputs = [...app.querySelectorAll(`[data-${prefix}-answer-text]`)];
+    if (answerInputs.length) {
+      out.answers = answerInputs.map(input => input.value).filter(v => v.trim() !== '');
+      const checked = [...app.querySelectorAll(`[data-${prefix}-answer-correct]:checked`)].map(input => Number(input.dataset[`${prefix}AnswerCorrect`])).filter(Number.isFinite);
+      out.correct = checked.length ? checked.filter(i => i < out.answers.length) : [0];
+    }
     const pairRows = [...app.querySelectorAll(`[data-${prefix}pair-item]`)];
     if (pairRows.length) {
       out.pairs = pairRows.map(input => {
@@ -566,7 +667,7 @@
       block._draftAction.type = app.querySelector('[data-inlineiv-type]').value;
       rerender();
     });
-    app.querySelectorAll('[data-inlineiv-prop], [data-inlineiv-list], [data-inlineiv-correct], [data-inlineivpair-item], [data-inlineivpair-target]').forEach(input => input.addEventListener('input', () => {
+    app.querySelectorAll('[data-inlineiv-prop], [data-inlineiv-list], [data-inlineiv-correct], [data-inlineiv-answer-text], [data-inlineiv-answer-correct], [data-inlineivpair-item], [data-inlineivpair-target]').forEach(input => input.addEventListener('input', () => {
       block._draftAction = readActionFromForm('inlineiv', block._draftAction);
       if (selected()) previewContainerAction(block, block._draftAction);
       refreshBlockPreview();
@@ -621,12 +722,12 @@ function previewContainerAction(block, action) {
     document.addEventListener('activity-content-edited', save);
     function render() {
       app.innerHTML = `${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block block-type-${esc(block.type)} active single-block" data-block-type="${esc(block.type)}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
-      bindToolbar(app); bindSingleEvents(); attachRunHandlers(app, () => block); save();
+      bindToolbar(app); bindSingleEvents(); attachRunHandlers(app, () => block); setTimeout(() => { const el = app.querySelector('.single-block'); if (el) fitBlockElement(el, block, true); save(); }, 0); save();
     }
     function bindSingleEvents() {
       const el = app.querySelector('.single-block'); const rich = el.querySelector('.editable-text');
       rich?.addEventListener('input', () => { block.richText = rich.innerHTML; save(); });
-      const ro = new ResizeObserver(() => { const min = minBlockSize(block.type); block.style.width = Math.max(Math.round(el.offsetWidth), min.width); block.style.height = Math.max(Math.round(el.offsetHeight), min.height); if (el.offsetWidth < min.width) el.style.width = min.width + 'px'; if (el.offsetHeight < min.height) el.style.height = min.height + 'px'; save(); }); ro.observe(el);
+      const ro = new ResizeObserver(() => { const min = minBlockSize(block.type); block.style.width = Math.max(Math.round(el.offsetWidth), min.width); block.style.height = Math.max(Math.round(el.offsetHeight), min.height); fitBlockElement(el, block, true); save(); }); ro.observe(el); setTimeout(() => { fitBlockElement(el, block, true); save(); }, 0);
       bindPropertiesForSingle();
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title: typeName(type), stageWidth: 1200, stageHeight: 700, pages: [{ title: typeName(type), blocks: [block] }] }, `${type}-export`);
     }
@@ -647,6 +748,7 @@ function previewContainerAction(block, action) {
         }
         render();
       }));
+      bindChoiceAnswers('blockchoice', block, (needsRender) => { save(); if (needsRender) render(); else { const el = app.querySelector('.single-block'); if (el) { el.querySelector('.block-inner').innerHTML = renderBlockContent(block, true); attachRunHandlers(el, () => block); fitBlockElement(el, block, true); } } });
       bindPairsSingle('blockpair', block);
     }
     function bindPairsSingle(prefix, target) {
@@ -713,7 +815,7 @@ function previewContainerAction(block, action) {
         draftAction.type = app.querySelector('[data-singleiv-type]').value;
         render();
       });
-      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleivpair-item], [data-singleivpair-target]').forEach(input => input.addEventListener('input', () => {
+      app.querySelectorAll('[data-singleiv-prop], [data-singleiv-list], [data-singleiv-correct], [data-singleiv-answer-text], [data-singleiv-answer-correct], [data-singleivpair-item], [data-singleivpair-target]').forEach(input => input.addEventListener('input', () => {
         draftAction = readCurrentForm(draftAction);
         if (selectedAction()) seekAndPreview(draftAction);
       }));
@@ -746,6 +848,8 @@ function previewContainerAction(block, action) {
         if (a) draftAction = normalizeAction(a);
         save(); render();
       });
+      app.querySelector(`[data-singleiv-answer-add]`)?.addEventListener('click', () => { draftAction = readCurrentForm(draftAction); draftAction.answers.push('Neue Antwort'); render(); });
+      app.querySelectorAll(`[data-singleiv-answer-remove]`).forEach(btn => btn.onclick = () => { draftAction = readCurrentForm(draftAction); if (draftAction.answers.length > 1) { const idx=Number(btn.dataset.singleivAnswerRemove); draftAction.answers.splice(idx,1); draftAction.correct=(draftAction.correct||[]).map(i=>i>idx?i-1:i).filter(i=>i!==idx&&i>=0); if(!draftAction.correct.length) draftAction.correct=[0]; render(); } });
       app.querySelector(`[data-singleivpair-add]`)?.addEventListener('click', () => { draftAction.pairs.push({ item:'', target:'' }); render(); });
       app.querySelectorAll(`[data-singleivpair-remove]`).forEach(btn => btn.onclick = () => { draftAction.pairs.splice(Number(btn.dataset.singleivpairRemove),1); render(); });
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title:'Interaktives Video', stageWidth:1200, stageHeight:720, pages:[{title:'Interaktives Video', blocks:[data]}] }, 'interactive-video-export');
