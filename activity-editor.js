@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '70';
+  const VERSION = '71';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -28,12 +28,27 @@
     });
   }
 
+  function minBlockSize(type = 'text') {
+    const sizes = {
+      choice: { width: 520, height: 260 },
+      dragWords: { width: 620, height: 240 },
+      dragDrop: { width: 680, height: 380 },
+      interactiveVideo: { width: 680, height: 420 },
+      video: { width: 620, height: 350 },
+      image: { width: 360, height: 240 },
+      text: { width: 260, height: 120 },
+      link: { width: 240, height: 90 }
+    };
+    return sizes[type] || { width: 300, height: 140 };
+  }
+
   function defaultStyle(type = 'text') {
+    const min = minBlockSize(type);
     return {
       x: 40,
       y: 54,
-      width: type === 'video' || type === 'interactiveVideo' ? 620 : 380,
-      height: type === 'video' || type === 'interactiveVideo' ? 350 : 180,
+      width: min.width,
+      height: min.height,
       z: 1,
       showBorder: true,
       showShadow: false,
@@ -84,6 +99,9 @@
     const base = defaultBlock(block.type || 'text');
     const out = { ...base, ...block };
     out.style = { ...defaultStyle(out.type), ...(block.style || {}) };
+    const min = minBlockSize(out.type);
+    out.style.width = Math.max(Number(out.style.width) || min.width, min.width);
+    out.style.height = Math.max(Number(out.style.height) || min.height, min.height);
     out.style.showBorder = out.style.showBorder !== false;
     out.style.bgTransparent = out.style.bgTransparent === true;
     out.answers = Array.isArray(out.answers) && out.answers.length ? out.answers.map(String) : base.answers;
@@ -142,7 +160,7 @@
     if (!s || !s.rangeCount) return;
     const node = s.anchorNode;
     const el = node?.nodeType === 1 ? node : node?.parentElement;
-    if (el?.closest?.('.editable-text')) savedRange = s.getRangeAt(0).cloneRange();
+    if (el?.closest?.('.editable-text, .editable-field')) savedRange = s.getRangeAt(0).cloneRange();
   });
   function restoreRange() {
     if (!savedRange) return;
@@ -173,18 +191,21 @@
     return `<video class="${cls}" src="${esc(src)}" controls></video>`;
   }
 
-  function renderChoice(block) {
-    const multi = (block.correct || []).length > 1;
-    return `<div class="activity-preview" data-run="choice"><h3>${esc(block.question)}</h3><p>${esc(block.description)}</p><div class="choice-stack">${block.answers.map((a,i)=>`<label class="choice-option"><input type="${multi?'checkbox':'radio'}" name="c-${esc(block.id)}" value="${i}"> ${esc(a)}</label>`).join('')}</div><div class="test-button-row"><button class="btn primary check-choice" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
+  function editableAttrs(editable, prop) {
+    return editable ? ` class="editable-field" contenteditable="true" data-edit-prop="${prop}" spellcheck="false"` : '';
   }
-  function renderDragWords(block) {
+  function renderChoice(block, editable = true) {
+    const multi = (block.correct || []).length > 1;
+    return `<div class="activity-preview" data-run="choice"><h3${editableAttrs(editable, 'question')}>${block.question || ''}</h3><p${editableAttrs(editable, 'description')}>${block.description || ''}</p><div class="choice-stack">${block.answers.map((a,i)=>`<label class="choice-option"><input type="${multi?'checkbox':'radio'}" name="c-${esc(block.id)}" value="${i}"> <span class="${editable ? 'editable-field' : ''}" ${editable ? `contenteditable="true" data-edit-answer-index="${i}" spellcheck="false"` : ''}>${a || ''}</span></label>`).join('')}</div><div class="test-button-row"><button class="btn primary check-choice" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
+  }
+  function renderDragWords(block, editable = true) {
     const words = [];
     const text = esc(block.dragText).replace(/\[([^\]]+)\]/g, (_, w) => { words.push(w); return `<span class="dtw-blank" data-answer="${esc(w)}"></span>`; });
-    return `<div class="activity-preview" data-run="dragWords"><p class="dtw-text">${text}</p><div class="word-bank">${words.map(w=>`<button class="chip" type="button" draggable="true">${esc(w)}</button>`).join('')}</div><div class="test-button-row"><button class="btn primary check-dtw" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
+    return `<div class="activity-preview" data-run="dragWords"><p class="dtw-text"${editable ? ' contenteditable="true" data-edit-drag-text spellcheck="false"' : ''}>${text}</p><div class="word-bank">${words.map(w=>`<button class="chip" type="button" draggable="true">${esc(w)}</button>`).join('')}</div><div class="test-button-row"><button class="btn primary check-dtw" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
   }
-  function renderDragDrop(block) {
+  function renderDragDrop(block, editable = true) {
     const targets = [...new Set((block.pairs || []).map(p => p.target).filter(Boolean))];
-    return `<div class="activity-preview" data-run="dragDrop"><p>${esc(block.description)}</p><div class="dnd-bank">${(block.pairs||[]).map(p=>`<button class="dnd-item" type="button" draggable="true" data-target="${esc(p.target)}">${esc(p.item)}</button>`).join('')}</div><div class="dnd-target-grid">${targets.map(t=>`<div class="dnd-target" data-target="${esc(t)}"><strong>${esc(t)}</strong></div>`).join('')}</div><div class="test-button-row"><button class="btn primary check-dnd" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
+    return `<div class="activity-preview" data-run="dragDrop"><p${editableAttrs(editable, 'description')}>${block.description || ''}</p><div class="dnd-bank">${(block.pairs||[]).map(p=>`<button class="dnd-item" type="button" draggable="true" data-target="${esc(p.target)}">${esc(p.item)}</button>`).join('')}</div><div class="dnd-target-grid">${targets.map(t=>`<div class="dnd-target" data-target="${esc(t)}"><strong>${esc(t)}</strong></div>`).join('')}</div><div class="test-button-row"><button class="btn primary check-dnd" type="button">Prüfen</button><button class="btn retry-activity" type="button">Neuer Versuch</button></div><div class="feedback" hidden></div></div>`;
   }
   function renderInteractiveVideo(block) {
     return `<div class="iv-stage" data-interactions="${esc(JSON.stringify(block.interactions || []))}">${mediaHtml(block.media, 'media-video')}<div class="glass-overlay" hidden></div></div>`;
@@ -195,13 +216,38 @@
     if (block.type === 'image') return block.media ? `<img class="media-img" src="${esc(block.media)}" alt="${esc(block.alt)}">` : '<div class="empty-media">Bild auswählen oder URL eintragen.</div>';
     if (block.type === 'video') return mediaHtml(block.media, 'media-video');
     if (block.type === 'interactiveVideo') return renderInteractiveVideo(block);
-    if (block.type === 'choice') return renderChoice(block);
-    if (block.type === 'dragWords') return renderDragWords(block);
-    if (block.type === 'dragDrop') return renderDragDrop(block);
+    if (block.type === 'choice') return renderChoice(block, editable);
+    if (block.type === 'dragWords') return renderDragWords(block, editable);
+    if (block.type === 'dragDrop') return renderDragDrop(block, editable);
     return '';
   }
 
+
+  function bindEditableFields(root = document, getBlock = () => null) {
+    root.querySelectorAll('[data-edit-prop], [data-edit-answer-index], [data-edit-drag-text]').forEach(el => {
+      el.addEventListener('mousedown', e => e.stopPropagation());
+      el.addEventListener('click', e => e.stopPropagation());
+      el.addEventListener('input', () => {
+        const host = el.closest('[data-block-id]');
+        const target = getBlock(host?.dataset.blockId) || window.__singleBlock || null;
+        if (!target) return;
+        if (el.dataset.editProp) target[el.dataset.editProp] = el.innerHTML;
+        if (el.dataset.editAnswerIndex !== undefined) {
+          const i = Number(el.dataset.editAnswerIndex);
+          target.answers = Array.isArray(target.answers) ? target.answers : [];
+          target.answers[i] = el.innerHTML;
+        }
+        if (el.dataset.editDragText !== undefined) {
+          // Rein textuell speichern; Lücken bleiben über die Eigenschaften mit [Klammern] sauber steuerbar.
+          target.dragText = el.innerText;
+        }
+        document.dispatchEvent(new CustomEvent('activity-content-edited'));
+      });
+    });
+  }
+
   function attachRunHandlers(root = document, getBlock = () => null) {
+    bindEditableFields(root, getBlock);
     let dragged = null;
     root.querySelectorAll('.chip,.dnd-item').forEach(el => { el.ondragstart = () => dragged = el; el.onclick = () => { dragged = el; }; });
     root.querySelectorAll('.dtw-blank').forEach(blank => {
@@ -302,7 +348,8 @@
   function blockStyle(block) {
     const s = block.style || defaultStyle(block.type);
     const bg = s.bgTransparent ? 'transparent' : (s.bgColor || '#ffffff');
-    return `left:${Number(s.x)||0}px;top:${Number(s.y)||0}px;width:${Number(s.width)||300}px;height:${Number(s.height)||160}px;z-index:${Number(s.z)||1};background:${bg};border-color:${s.showBorder === false ? 'transparent' : 'rgba(47,95,143,.40)'};box-shadow:${s.showShadow === true ? '0 8px 22px rgba(17,24,39,.09)' : 'none'}`;
+    const min = minBlockSize(block.type);
+    return `left:${Number(s.x)||0}px;top:${Number(s.y)||0}px;width:${Math.max(Number(s.width)||min.width, min.width)}px;height:${Math.max(Number(s.height)||min.height, min.height)}px;min-width:${min.width}px;min-height:${min.height}px;z-index:${Number(s.z)||1};background:${bg};border-color:${s.showBorder === false ? 'transparent' : 'rgba(47,95,143,.40)'};box-shadow:${s.showShadow === true ? '0 8px 22px rgba(17,24,39,.09)' : 'none'}`;
   }
 
   function renderPairsEditor(pairs = [], prefix = 'pair') {
@@ -363,7 +410,7 @@
       <div class="inline-iv-left">
         <label class="iv-file-row">Lokale Videodatei <input type="file" accept="video/*" data-file="media"></label>
         <p class="muted">Wähle eine lokale Videodatei und lege darunter deine Interaktionen an.</p>
-        <div class="iv-editor-section compact-list-shell"><h3>Interaktionsliste</h3><div class="action-list compact-list">${block.interactions.length ? block.interactions.map((a,i)=>`<button class="${a.id===editingId?'active':''}" type="button" data-inline-action="${esc(a.id)}"><span class="time-pill">${Number(a.time).toFixed(1)} s</span><strong>${esc(a.question || `Interaktion ${i+1}`)}</strong><small>${esc(typeName(a.type))}</small></button>`).join('') : '<p class="muted">Noch keine Interaktion angelegt.</p>'}</div></div>
+        <div class="iv-editor-section compact-list-shell"><h3>Interaktionsliste</h3><div class="action-list compact-list">${block.interactions.length ? block.interactions.map((a,i)=>`<div class="action-list-row ${a.id===editingId?'active':''}"><button class="action-select" type="button" data-inline-action="${esc(a.id)}"><span class="time-pill">${Number(a.time).toFixed(1)} s</span><strong>${esc(String(a.question || `Interaktion ${i+1}`).replace(/<[^>]+>/g,''))}</strong><small>${esc(typeName(a.type))}</small></button><button class="action-delete" type="button" title="Interaktion löschen" data-inline-delete-action="${esc(a.id)}">×</button></div>`).join('') : '<p class="muted">Noch keine Interaktion angelegt.</p>'}</div></div>
       </div>
       <div class="inline-iv-right">
         <div class="iv-editor-section"><h3>${editing ? 'Ausgewählte Interaktion bearbeiten' : 'Neue Interaktion'}</h3>${renderActionBuilder(draft, 'inlineiv', !!editing)}</div>
@@ -396,6 +443,7 @@
     const selected = () => block(state.selectedId);
     const save = () => localStorage.setItem(storeKey, JSON.stringify(state));
     const maxZ = () => Math.max(1, ...current().blocks.map(b => Number(b.style.z)||1));
+    document.addEventListener('activity-content-edited', save);
 
     function render() {
       const page = current(); const pct = ((state.activePage + 1) / state.pages.length) * 100;
@@ -411,7 +459,7 @@
             <div class="stage-frame" style="height:${state.stageHeight}px" data-stage>
               <div class="progress-inside"><span style="width:${pct}%"></span></div>
               ${kind === 'course' ? `<button class="slide-arrow left" data-prev-page>‹</button><button class="slide-arrow right" data-next-page>›</button>` : ''}
-              ${page.blocks.map(b=>`<article class="free-block ${b.id===state.selectedId?'active':''}" data-block-id="${esc(b.id)}" style="${blockStyle(b)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(b, b.id===state.selectedId)}</div></article>`).join('')}
+              ${page.blocks.map(b=>`<article class="free-block block-type-${esc(b.type)} ${b.id===state.selectedId?'active':''}" data-block-type="${esc(b.type)}" data-block-id="${esc(b.id)}" style="${blockStyle(b)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(b, b.id===state.selectedId)}</div></article>`).join('')}
             </div>
             ${kind === 'course' ? slideStrip : ''}
           </div>
@@ -442,7 +490,7 @@
       el.addEventListener('mousedown', e => { if (state.selectedId !== b.id) { state.selectedId = b.id; render(); } });
       const rich = el.querySelector('.editable-text');
       if (rich) rich.addEventListener('input', () => { b.richText = rich.innerHTML; save(); });
-      const ro = new ResizeObserver(() => { if (state.selectedId === b.id) { b.style.width = Math.round(el.offsetWidth); b.style.height = Math.round(el.offsetHeight); save(); } }); ro.observe(el);
+      const ro = new ResizeObserver(() => { if (state.selectedId === b.id) { const min = minBlockSize(b.type); b.style.width = Math.max(Math.round(el.offsetWidth), min.width); b.style.height = Math.max(Math.round(el.offsetHeight), min.height); if (el.offsetWidth < min.width) el.style.width = min.width + 'px'; if (el.offsetHeight < min.height) el.style.height = min.height + 'px'; save(); } }); ro.observe(el);
       const handle = el.querySelector('.move-handle'); let start = null;
       handle?.addEventListener('mousedown', e => { e.preventDefault(); start = { x:e.clientX, y:e.clientY, left:b.style.x, top:b.style.y }; document.body.classList.add('dragging'); });
       document.addEventListener('mousemove', e => { if (!start) return; b.style.x = Math.max(0, start.left + e.clientX - start.x); b.style.y = Math.max(24, start.top + e.clientY - start.y); el.style.left = b.style.x+'px'; el.style.top = b.style.y+'px'; });
@@ -543,6 +591,13 @@
       block._editingActionId = btn.dataset.inlineAction; const a = selected(); if (a) { block._draftAction = normalizeAction(a); }
       save(); rerender(); setTimeout(() => previewContainerAction(block, block._draftAction), 60);
     });
+    app.querySelectorAll('[data-inline-delete-action]').forEach(btn => btn.onclick = (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.inlineDeleteAction;
+      block.interactions = block.interactions.filter(x => x.id !== id);
+      if (block._editingActionId === id) { block._editingActionId = null; block._draftAction = normalizeAction(defaultAction('choice')); }
+      refreshBlockPreview(); rerender();
+    });
     app.querySelector(`[data-inlineivpair-add]`)?.addEventListener('click', () => { block._draftAction.pairs.push({ item: '', target: '' }); save(); rerender(); });
     app.querySelectorAll(`[data-inlineivpair-remove]`).forEach(btn => btn.onclick = () => { block._draftAction.pairs.splice(Number(btn.dataset.inlineivpairRemove), 1); save(); rerender(); });
   }
@@ -563,14 +618,15 @@ function previewContainerAction(block, action) {
     let block = defaultBlock(type); try { const saved = localStorage.getItem(storeKey); if (saved) block = normalizeBlock(JSON.parse(saved)); } catch {}
     window.__singleBlock = block;
     const save = () => { window.__singleBlock = block; localStorage.setItem(storeKey, JSON.stringify(block)); };
+    document.addEventListener('activity-content-edited', save);
     function render() {
-      app.innerHTML = `${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block active single-block" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
+      app.innerHTML = `${toolbarHtml()}<div id="propertiesHost">${propertiesHtml(block, true)}</div><section class="single-stage"><article class="free-block block-type-${esc(block.type)} active single-block" data-block-type="${esc(block.type)}" data-block-id="${esc(block.id)}" style="${blockStyle(block)}"><div class="move-handle"></div><div class="block-inner">${renderBlockContent(block,true)}</div></article></section><div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button></div>`;
       bindToolbar(app); bindSingleEvents(); attachRunHandlers(app, () => block); save();
     }
     function bindSingleEvents() {
       const el = app.querySelector('.single-block'); const rich = el.querySelector('.editable-text');
       rich?.addEventListener('input', () => { block.richText = rich.innerHTML; save(); });
-      const ro = new ResizeObserver(() => { block.style.width = Math.round(el.offsetWidth); block.style.height = Math.round(el.offsetHeight); save(); }); ro.observe(el);
+      const ro = new ResizeObserver(() => { const min = minBlockSize(block.type); block.style.width = Math.max(Math.round(el.offsetWidth), min.width); block.style.height = Math.max(Math.round(el.offsetHeight), min.height); if (el.offsetWidth < min.width) el.style.width = min.width + 'px'; if (el.offsetHeight < min.height) el.style.height = min.height + 'px'; save(); }); ro.observe(el);
       bindPropertiesForSingle();
       app.querySelector('#exportZip').onclick = () => downloadActivityZip({ title: typeName(type), stageWidth: 1200, stageHeight: 700, pages: [{ title: typeName(type), blocks: [block] }] }, `${type}-export`);
     }
@@ -613,6 +669,7 @@ function previewContainerAction(block, action) {
     let selectedActionId = null;
     let draftAction = normalizeAction(defaultAction('choice'));
     const save = () => localStorage.setItem(storeKey, JSON.stringify(data));
+    document.addEventListener('activity-content-edited', save);
     const selectedAction = () => data.interactions.find(a => a.id === selectedActionId) || null;
 
     function render() {
@@ -622,12 +679,11 @@ function previewContainerAction(block, action) {
           <div class="iv-main-panel">
             <div class="iv-file-bar"><label>Lokale Videodatei <input id="videoFile" type="file" accept="video/*"></label><span class="muted">Nur lokale Videodateien. Die Datei wird beim ZIP-Export als Asset übernommen.</span></div>
             <div class="iv-preview live-iv-preview">${renderInteractiveVideo(data)}</div>
-            <div class="iv-list-panel"><div class="iv-list-head"><h2>Interaktionsliste</h2><p class="muted">Eintrag anklicken: Video springt zur Zeitmarke und zeigt das Overlay.</p></div><div class="action-list visual-list">${data.interactions.length ? data.interactions.map((a,i)=>`<button class="${a.id===selectedActionId?'active':''}" type="button" data-action="${esc(a.id)}"><span class="time-pill">${Number(a.time).toFixed(1)} s</span><strong>${esc(a.question || `Interaktion ${i+1}`)}</strong><small>${esc(typeName(a.type))}</small></button>`).join('') : '<p class="muted empty-list">Noch keine Interaktion angelegt.</p>'}</div></div>
+            <div class="iv-list-panel"><div class="iv-list-head"><h2>Interaktionsliste</h2><p class="muted">Eintrag anklicken: Video springt zur Zeitmarke und zeigt das Overlay.</p></div><div class="action-list visual-list">${data.interactions.length ? data.interactions.map((a,i)=>`<div class="action-list-row ${a.id===selectedActionId?'active':''}"><button class="action-select" type="button" data-action="${esc(a.id)}"><span class="time-pill">${Number(a.time).toFixed(1)} s</span><strong>${esc(String(a.question || `Interaktion ${i+1}`).replace(/<[^>]+>/g,''))}</strong><small>${esc(typeName(a.type))}</small></button><button class="action-delete" type="button" title="Interaktion löschen" data-delete-action="${esc(a.id)}">×</button></div>`).join('') : '<p class="muted empty-list">Noch keine Interaktion angelegt.</p>'}</div></div>
           </div>
           <aside class="iv-side-panel">
             <h2>${selected ? 'Ausgewählte Interaktion bearbeiten' : 'Neue Interaktion anlegen'}</h2>
             ${renderActionBuilder(formAction, 'singleiv', !!selected)}
-            <button class="btn danger" id="deleteAction" type="button" ${selected ? '' : 'disabled'}>Ausgewählte Aktion löschen</button>
           </aside>
         </section>
         <div class="export-row"><button class="btn primary" id="exportZip">HTML-ZIP herunterladen</button><button class="btn" id="clearLocal">Lokale Speicherung löschen</button></div>`;
@@ -677,11 +733,11 @@ function previewContainerAction(block, action) {
         draftAction = normalizeAction(current);
         save(); render();
       });
-      app.querySelector('#deleteAction')?.addEventListener('click', () => {
-        const a = selectedAction(); if (!a) return;
-        data.interactions = data.interactions.filter(x => x.id !== a.id);
-        selectedActionId = null;
-        draftAction = normalizeAction(defaultAction('choice'));
+      app.querySelectorAll('[data-delete-action]').forEach(btn => btn.onclick = (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.deleteAction;
+        data.interactions = data.interactions.filter(x => x.id !== id);
+        if (selectedActionId === id) { selectedActionId = null; draftAction = normalizeAction(defaultAction('choice')); }
         save(); render();
       });
       app.querySelectorAll('[data-action]').forEach(btn => btn.onclick = () => {

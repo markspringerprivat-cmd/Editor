@@ -355,3 +355,159 @@ body[data-editor="book"] .book-work{
     max-height:none;
   }
 }
+
+/* v71: breiteres Arbeitslayout, größere Mindestgrößen, Inline-Löschen in Interaktionslisten */
+body{
+  padding-left:24px!important;
+  padding-right:24px!important;
+}
+.page-shell{
+  width:min(1800px,calc(100vw - 48px))!important;
+}
+body[data-editor="course"] #app,
+body[data-editor="book"] #app{
+  grid-template-columns:minmax(0,1fr) 400px!important;
+  column-gap:24px!important;
+}
+body[data-editor="interactive-video"] .page-shell,
+body[data-editor="choice"] .page-shell,
+body[data-editor="drag-words"] .page-shell,
+body[data-editor="drag-drop"] .page-shell{
+  width:min(1700px,calc(100vw - 48px))!important;
+}
+body[data-editor="choice"] #app,
+body[data-editor="drag-words"] #app,
+body[data-editor="drag-drop"] #app{
+  display:grid;
+  grid-template-columns:420px minmax(0,1fr);
+  column-gap:24px;
+  align-items:start;
+}
+body[data-editor="choice"] #app > .format-toolbar,
+body[data-editor="drag-words"] #app > .format-toolbar,
+body[data-editor="drag-drop"] #app > .format-toolbar,
+body[data-editor="choice"] #app > .export-row,
+body[data-editor="drag-words"] #app > .export-row,
+body[data-editor="drag-drop"] #app > .export-row{
+  grid-column:1 / -1;
+}
+body[data-editor="choice"] #propertiesHost,
+body[data-editor="drag-words"] #propertiesHost,
+body[data-editor="drag-drop"] #propertiesHost{
+  grid-column:1;
+  position:sticky;
+  top:18px;
+}
+body[data-editor="choice"] .single-stage,
+body[data-editor="drag-words"] .single-stage,
+body[data-editor="drag-drop"] .single-stage{
+  grid-column:2;
+  min-height:820px;
+}
+.single-block{
+  left:56px!important;
+  top:56px!important;
+}
+.free-block.block-type-choice{min-width:520px!important;min-height:260px!important;}
+.free-block.block-type-dragWords{min-width:620px!important;min-height:240px!important;}
+.free-block.block-type-dragDrop{min-width:680px!important;min-height:380px!important;}
+.free-block.block-type-interactiveVideo{min-width:680px!important;min-height:420px!important;}
+.free-block.block-type-video{min-width:620px!important;min-height:350px!important;}
+.block-inner{
+  overflow:visible!important;
+}
+.free-block{
+  overflow:visible!important;
+}
+.activity-preview{
+  min-height:100%;
+}
+.editable-field,
+.dtw-text[contenteditable="true"]{
+  outline:1px dashed transparent;
+  border-radius:4px;
+  min-height:1.25em;
+}
+.editable-field:hover,
+.editable-field:focus,
+.dtw-text[contenteditable="true"]:hover,
+.dtw-text[contenteditable="true"]:focus{
+  outline-color:rgba(47,95,143,.55);
+  background:rgba(232,242,251,.42);
+}
+.choice-option .editable-field{
+  display:inline-block;
+  min-width:70px;
+}
+.visual-list,.compact-list{
+  grid-template-columns:1fr!important;
+}
+.action-list-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 42px;
+  gap:8px;
+  align-items:stretch;
+}
+.action-list-row.active .action-select{
+  background:#e8f2fb;
+  border-color:#2f5f8f;
+}
+.visual-list .action-list-row,
+.compact-list .action-list-row{
+  margin:0;
+}
+.visual-list .action-select,
+.compact-list .action-select{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:5px 10px;
+  align-items:center;
+  border:1px solid rgba(47,95,143,.22);
+  background:#fff;
+  padding:12px;
+  text-align:left;
+  border-radius:12px;
+  cursor:pointer;
+  width:100%;
+}
+.visual-list .action-select small,
+.compact-list .action-select small{
+  grid-column:2;
+  color:#64748b;
+}
+.action-delete{
+  border:1px solid #ef4444!important;
+  background:#fee2e2!important;
+  color:#991b1b!important;
+  font-weight:900;
+  border-radius:12px;
+  cursor:pointer;
+  font-size:1.2rem;
+  line-height:1;
+}
+.iv-side-panel .btn.danger#deleteAction{display:none!important;}
+.iv-studio{
+  grid-template-columns:minmax(700px,1fr) minmax(460px,540px)!important;
+  max-width:100%;
+}
+.live-iv-preview{height:560px!important;}
+@media(max-width:1180px){
+  body[data-editor="course"] #app,
+  body[data-editor="book"] #app,
+  body[data-editor="choice"] #app,
+  body[data-editor="drag-words"] #app,
+  body[data-editor="drag-drop"] #app,
+  .iv-studio{
+    grid-template-columns:1fr!important;
+  }
+  body[data-editor="choice"] #propertiesHost,
+  body[data-editor="drag-words"] #propertiesHost,
+  body[data-editor="drag-drop"] #propertiesHost{
+    position:static;
+  }
+  body[data-editor="choice"] .single-stage,
+  body[data-editor="drag-words"] .single-stage,
+  body[data-editor="drag-drop"] .single-stage{
+    grid-column:1;
+  }
+}
