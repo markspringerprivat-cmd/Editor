@@ -3,7 +3,7 @@
 
   const app = document.getElementById('app');
   const editorType = document.body.dataset.editor;
-  const VERSION = '68';
+  const VERSION = '70';
   const mediaFileStore = new Map();
 
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));

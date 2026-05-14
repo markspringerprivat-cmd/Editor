@@ -155,3 +155,203 @@ button::before,button::after,.btn::before,.btn::after{content:none!important;dis
 .iv-stage .glass-overlay .continue-video {
   margin-left: 0;
 }
+
+
+/* v69: Interaktions-Editor nicht mehr abschneiden */
+.iv-studio{
+  grid-template-columns:minmax(560px,1fr) minmax(460px,520px);
+  gap:24px;
+}
+.iv-side-panel{
+  overflow:visible !important;
+  min-width:0;
+}
+.refined-iv-builder{
+  overflow:visible;
+}
+.refined-iv-builder .iv-top-row{
+  grid-template-columns:1fr !important;
+  gap:12px;
+}
+.refined-iv-builder #takeTime{
+  width:100%;
+  white-space:normal;
+  text-align:center;
+}
+.refined-iv-builder .iv-field-block.full,
+.refined-iv-builder .iv-text-row{
+  min-width:0;
+}
+.refined-iv-builder label{
+  min-width:0;
+}
+.refined-iv-builder input,
+.refined-iv-builder textarea,
+.refined-iv-builder select{
+  display:block;
+  max-width:100%;
+}
+.iv-side-panel .btn.danger{
+  width:100%;
+  white-space:normal;
+}
+.iv-stage .glass-overlay .iv-card > .test-button-row{
+  display:flex !important;
+}
+.iv-stage .glass-overlay .activity-preview .test-button-row .continue-video{
+  order:3;
+}
+@media(max-width:1160px){
+  .iv-studio{grid-template-columns:1fr;}
+  .iv-side-panel{position:static;}
+}
+
+/* v70: rechte, stabile Eigenschaften-Spalte für Container-Editoren */
+body[data-editor="course"] #app,
+body[data-editor="book"] #app{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 340px;
+  column-gap:18px;
+  align-items:start;
+}
+body[data-editor="course"] #app > .insert-toolbar,
+body[data-editor="course"] #app > .format-toolbar,
+body[data-editor="course"] #app > .container-work,
+body[data-editor="course"] #app > .export-row,
+body[data-editor="book"] #app > .insert-toolbar,
+body[data-editor="book"] #app > .format-toolbar,
+body[data-editor="book"] #app > .container-work,
+body[data-editor="book"] #app > .export-row{
+  grid-column:1;
+  min-width:0;
+}
+body[data-editor="course"] #propertiesHost,
+body[data-editor="book"] #propertiesHost{
+  grid-column:2;
+  grid-row:1 / span 20;
+  position:sticky;
+  top:18px;
+  align-self:start;
+  min-width:0;
+  max-height:calc(100vh - 36px);
+  overflow:auto;
+}
+body[data-editor="course"] #propertiesHost .properties-strip,
+body[data-editor="book"] #propertiesHost .properties-strip{
+  display:grid;
+  grid-template-columns:1fr;
+  align-items:stretch;
+  gap:12px;
+  margin:0;
+  padding:16px;
+  background:#fff;
+}
+body[data-editor="course"] #propertiesHost .prop-title,
+body[data-editor="book"] #propertiesHost .prop-title{
+  margin:0 0 2px;
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(17,24,39,.14);
+}
+body[data-editor="course"] #propertiesHost label,
+body[data-editor="book"] #propertiesHost label{
+  width:100%;
+  min-width:0;
+}
+body[data-editor="course"] #propertiesHost input:not([type="checkbox"]),
+body[data-editor="course"] #propertiesHost textarea,
+body[data-editor="course"] #propertiesHost select,
+body[data-editor="book"] #propertiesHost input:not([type="checkbox"]),
+body[data-editor="book"] #propertiesHost textarea,
+body[data-editor="book"] #propertiesHost select{
+  width:100%;
+  min-width:0;
+}
+body[data-editor="course"] #propertiesHost textarea,
+body[data-editor="book"] #propertiesHost textarea{
+  min-width:0;
+  resize:vertical;
+}
+body[data-editor="course"] #propertiesHost .checkline,
+body[data-editor="book"] #propertiesHost .checkline{
+  display:flex!important;
+  justify-content:flex-start;
+}
+body[data-editor="course"] #propertiesHost .layer-buttons,
+body[data-editor="book"] #propertiesHost .layer-buttons{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+body[data-editor="course"] #propertiesHost .layer-buttons button,
+body[data-editor="book"] #propertiesHost .layer-buttons button{
+  width:100%;
+}
+body[data-editor="course"] #propertiesHost .inline-iv-editor,
+body[data-editor="course"] #propertiesHost .inline-iv-split,
+body[data-editor="book"] #propertiesHost .inline-iv-editor,
+body[data-editor="book"] #propertiesHost .inline-iv-split{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  min-width:0!important;
+  gap:12px!important;
+}
+body[data-editor="course"] #propertiesHost .inline-iv-left,
+body[data-editor="course"] #propertiesHost .inline-iv-right,
+body[data-editor="book"] #propertiesHost .inline-iv-left,
+body[data-editor="book"] #propertiesHost .inline-iv-right{
+  min-width:0;
+}
+body[data-editor="course"] #propertiesHost .iv-editor-section,
+body[data-editor="course"] #propertiesHost .iv-builder-card,
+body[data-editor="book"] #propertiesHost .iv-editor-section,
+body[data-editor="book"] #propertiesHost .iv-builder-card{
+  min-width:0;
+}
+body[data-editor="course"] #propertiesHost .iv-top-row,
+body[data-editor="course"] #propertiesHost .iv-text-row,
+body[data-editor="course"] #propertiesHost .iv-builder-grid,
+body[data-editor="book"] #propertiesHost .iv-top-row,
+body[data-editor="book"] #propertiesHost .iv-text-row,
+body[data-editor="book"] #propertiesHost .iv-builder-grid{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:10px!important;
+}
+body[data-editor="course"] #propertiesHost .pair-editor,
+body[data-editor="book"] #propertiesHost .pair-editor{
+  min-width:0;
+  width:100%;
+}
+body[data-editor="course"] #propertiesHost .pair-head,
+body[data-editor="book"] #propertiesHost .pair-head{
+  display:none;
+}
+body[data-editor="course"] #propertiesHost .pair-row,
+body[data-editor="book"] #propertiesHost .pair-row{
+  grid-template-columns:1fr;
+  gap:6px;
+  padding:8px;
+  border:1px solid rgba(17,24,39,.10);
+  background:#f8fafc;
+}
+body[data-editor="course"] #propertiesHost .pair-row button,
+body[data-editor="book"] #propertiesHost .pair-row button{
+  width:100%;
+}
+body[data-editor="course"] .course-work,
+body[data-editor="book"] .book-work{
+  margin-top:14px;
+}
+@media(max-width:1100px){
+  body[data-editor="course"] #app,
+  body[data-editor="book"] #app{
+    grid-template-columns:1fr;
+  }
+  body[data-editor="course"] #propertiesHost,
+  body[data-editor="book"] #propertiesHost{
+    grid-column:1;
+    grid-row:auto;
+    position:static;
+    max-height:none;
+  }
+}
